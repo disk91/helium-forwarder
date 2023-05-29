@@ -63,6 +63,8 @@ public class WebSecurityProfile {
                         .antMatchers("/internal/3.0/health").permitAll()
                         // user management
                         .antMatchers("/forwarder/1.0/sign/**").permitAll()
+                        // capture endpoint
+                        .antMatchers("/capture/").permitAll()
                         // public messages
                         // swagger documentation
                         .antMatchers("/swagger-doc/**").permitAll()
