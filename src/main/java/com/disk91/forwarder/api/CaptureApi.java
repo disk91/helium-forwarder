@@ -43,8 +43,9 @@ public class CaptureApi {
             method= RequestMethod.POST)
     public ResponseEntity<?> postChirpstackMessage(
             HttpServletRequest request,
-            @RequestBody(required = true) ChipstackPayload message
+            @RequestBody(required = true)  ChipstackPayload /* String */ message
     ) {
+
         try {
             ObjectMapper mapper = new ObjectMapper();
             log.info(mapper.writeValueAsString(message));
@@ -52,6 +53,8 @@ public class CaptureApi {
             log.error(e.getMessage());
             e.printStackTrace();
         }
+
+//         log.info(message);
 
         return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
     }

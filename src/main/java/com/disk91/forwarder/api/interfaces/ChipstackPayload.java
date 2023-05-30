@@ -1,7 +1,12 @@
 package com.disk91.forwarder.api.interfaces;
 
 import com.disk91.forwarder.api.interfaces.sub.ChirpstackDeviceInfo;
+import com.disk91.forwarder.api.interfaces.sub.ChirpstackRxInfo;
+import com.disk91.forwarder.api.interfaces.sub.ChirpstackTxInfo;
+import com.disk91.forwarder.api.interfaces.sub.KeyValue;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ChipstackPayload {
@@ -25,9 +30,15 @@ public class ChipstackPayload {
          },
     "devAddr":"480007a0",
     "dr":3,
+    "adr":false,
     "fCnt":22772,
     "fPort":1,
+    "confirmed":false,
     "data":"HQ==",
+    "object":{
+        "other":"123",
+        "temp":22.5
+    },
     "rxInfo":[
         {
             "gatewayId":"c986398a305dee5a",
@@ -57,12 +68,12 @@ public class ChipstackPayload {
     "txInfo":{
         "frequency":867500000,
         "modulation":{
-        "lora":{
-            "bandwidth":125000,
-            "spreadingFactor":9,
-            "codeRate":"CR_4_5"
+            "lora":{
+                "bandwidth":125000,
+                "spreadingFactor":9,
+                "codeRate":"CR_4_5"
+            }
         }
-    }
     }
 }
      */
@@ -76,6 +87,14 @@ public class ChipstackPayload {
     private int fCnt;
     private int fPort;
     private String data;
+    private boolean confirmed;
+    private boolean adr;
+
+    private KeyValue object;
+
+    private List<ChirpstackRxInfo> rxInfo;
+
+    private ChirpstackTxInfo txInfo;
 
     // ---
 
@@ -141,5 +160,45 @@ public class ChipstackPayload {
 
     public void setData(String data) {
         this.data = data;
+    }
+
+    public boolean isConfirmed() {
+        return confirmed;
+    }
+
+    public void setConfirmed(boolean confirmed) {
+        this.confirmed = confirmed;
+    }
+
+    public List<ChirpstackRxInfo> getRxInfo() {
+        return rxInfo;
+    }
+
+    public void setRxInfo(List<ChirpstackRxInfo> rxInfo) {
+        this.rxInfo = rxInfo;
+    }
+
+    public ChirpstackTxInfo getTxInfo() {
+        return txInfo;
+    }
+
+    public void setTxInfo(ChirpstackTxInfo txInfo) {
+        this.txInfo = txInfo;
+    }
+
+    public boolean isAdr() {
+        return adr;
+    }
+
+    public void setAdr(boolean adr) {
+        this.adr = adr;
+    }
+
+    public KeyValue getObject() {
+        return object;
+    }
+
+    public void setObject(KeyValue object) {
+        this.object = object;
     }
 }
