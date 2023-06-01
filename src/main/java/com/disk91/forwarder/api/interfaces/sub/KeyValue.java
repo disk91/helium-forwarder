@@ -23,6 +23,14 @@ public class KeyValue {
         this.entry.put(name, value);
     }
 
+    public int size() {
+        return entry.size();
+    }
+
+    public String getOneKey(String key) {
+        return this.entry.get(key).toString();
+    }
+
     @Override
     public String toString() {
         boolean first = true;

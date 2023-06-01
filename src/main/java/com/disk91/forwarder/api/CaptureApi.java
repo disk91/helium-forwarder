@@ -2,6 +2,7 @@ package com.disk91.forwarder.api;
 
 import com.disk91.forwarder.api.interfaces.ActionResult;
 import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.service.PayloadService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.ingeniousthings.tools.Now;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +31,9 @@ import java.util.List;
 public class CaptureApi {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
+
+    @Autowired
+    protected PayloadService payloadService;
 
     @Operation(summary = "Get a message from chirpstack",
             description = "Get a message from chirpstack",
@@ -48,12 +53,13 @@ public class CaptureApi {
 
         try {
             ObjectMapper mapper = new ObjectMapper();
-            log.info(mapper.writeValueAsString(message));
+            log.info("## "+mapper.writeValueAsString(message));
         } catch (JsonProcessingException e) {
             log.error(e.getMessage());
             e.printStackTrace();
         }
 
+        payloadService.asyncProcessPayload(request,message);
 //         log.info(message);
 
         return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);

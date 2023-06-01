@@ -1,6 +1,7 @@
 package com.disk91.forwarder.api.interfaces;
 
 import com.disk91.forwarder.api.interfaces.sub.HntDcBalance;
+import com.disk91.forwarder.api.interfaces.sub.HntDecoded;
 import com.disk91.forwarder.api.interfaces.sub.HntHotspot;
 import com.disk91.forwarder.api.interfaces.sub.HntMetadata;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -23,7 +24,7 @@ public class HeliumPayload {
              "longitude":1.41,
              "sats":4
             },
-        "status":"success"
+         "status":"success"
         },
         "dev_eui":"756404B9D784EF5A",
         "devaddr":"11000048",
@@ -70,6 +71,9 @@ public class HeliumPayload {
     protected String id;
     @Schema(description = "Helium device Name", required = false)
     protected String name;
+
+    @Schema(description = "Payload decoded data", required = false)
+    protected HntDecoded decoded;
 
     @Schema(description = "Sequence Id", required = false)
     protected int fcnt;
@@ -198,5 +202,13 @@ public class HeliumPayload {
 
     public void setMetadata(HntMetadata metadata) {
         this.metadata = metadata;
+    }
+
+    public HntDecoded getDecoded() {
+        return decoded;
+    }
+
+    public void setDecoded(HntDecoded decoded) {
+        this.decoded = decoded;
     }
 }

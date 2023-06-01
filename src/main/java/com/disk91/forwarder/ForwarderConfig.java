@@ -75,8 +75,51 @@ public class ForwarderConfig {
 
 
     // ==============================
-    // Monitoring
+    // api backend
     // ==============================
 
+    @Value ("${helium.position.url}")
+    private String HeliumPositionUrl;
+
+    @Value ("${helium.position.user}")
+    private String HeliumPositionUser;
+
+    @Value ("${helium.position.pass}")
+    private String HeliumPositionPass;
+
+    public String getHeliumPositionUrl() {
+        return HeliumPositionUrl;
+    }
+
+    public String getHeliumPositionUser() {
+        return HeliumPositionUser;
+    }
+
+    public String getHeliumPositionPass() {
+        return HeliumPositionPass;
+    }
+
+    // ==============================
+    // payload processing
+    // ==============================
+
+    @Value ("${helium.async.processor.default}")
+    private int heliumAsyncProcessorDefault;
+
+    @Value ("${helium.async.processor:0}")
+    private int heliumAsyncProcessor;
+
+    public int getHeliumAsyncProcessorDefault() {
+        return heliumAsyncProcessorDefault;
+    }
+
+    public int getHeliumAsyncProcessorExternal() {
+        return heliumAsyncProcessor;
+    }
+
+    public int getHeliumAsyncProcessor() {
+        if ( heliumAsyncProcessor > 0 ) return heliumAsyncProcessor;
+        return heliumAsyncProcessorDefault;
+    }
 
 }

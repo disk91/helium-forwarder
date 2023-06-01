@@ -24,30 +24,42 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class HntDcBalance {
+public class HntDecoded {
 
-    /* {"balance":7630,"nonce":1}, */
+    /*
+        "decoded":{
+         "payload":{
+             "altitude":1000,
+             "latitude":0.25,
+             "longitude":1.41,
+             "sats":4
+            },
+         "status":"success"
+        },
 
-    @Schema(description = "Balance of DC portfolio", required = false)
-    protected long balance;
+    */
+    @Schema(description = "Decoded payload", required = false)
+    protected KeyValue payload;
 
-    @Schema(description = "Unclear what it is", required = false)
-    protected int nonce;
+    @Schema(description = "Decoding status", required = false)
+    protected String status;
+
+    // ---
 
 
-    public long getBalance() {
-        return balance;
+    public KeyValue getPayload() {
+        return payload;
     }
 
-    public void setBalance(long balance) {
-        this.balance = balance;
+    public void setPayload(KeyValue payload) {
+        this.payload = payload;
     }
 
-    public int getNonce() {
-        return nonce;
+    public String getStatus() {
+        return status;
     }
 
-    public void setNonce(int nonce) {
-        this.nonce = nonce;
+    public void setStatus(String status) {
+        this.status = status;
     }
 }
