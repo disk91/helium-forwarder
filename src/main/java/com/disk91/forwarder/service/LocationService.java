@@ -1,8 +1,6 @@
 package com.disk91.forwarder.service;
 
 import com.disk91.forwarder.ForwarderConfig;
-import com.disk91.forwarder.jpa.db.HeliumUser;
-import com.disk91.forwarder.jpa.db.User;
 import com.disk91.forwarder.service.itf.HotspotPosition;
 import com.disk91.forwarder.service.itf.sub.LatLng;
 import fr.ingeniousthings.tools.*;
@@ -151,10 +149,11 @@ public class LocationService {
             log.error("Position backend communication exception :" + e.getStatusCode() + "[" + e.getMessage() + "]");
             log.error("Related to Hotspost details (2) for "+hotspotID);
             throw new ITParseException();
+        } catch (Exception x ) {
+            log.error("Unexpected error "+x.getMessage());
+            throw new ITParseException();
         }
     }
-
-
 
 
 }

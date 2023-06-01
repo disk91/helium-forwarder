@@ -8,16 +8,24 @@ import com.disk91.forwarder.service.itf.HotspotPosition;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.ingeniousthings.tools.DateConverters;
+import fr.ingeniousthings.tools.ITNotFoundException;
+import fr.ingeniousthings.tools.ITParseException;
+import fr.ingeniousthings.tools.Now;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
-import java.net.http.HttpHeaders;
-import java.net.http.HttpRequest;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -51,22 +59,81 @@ public class PayloadService {
         }
     }
 
+    protected enum INTEGRATION_TYPE {
+        UNKNOWN,
+        HTTP,
+        MQTT
+    }
+
+    protected enum INTEGRATION_VERB {
+        UNKNOWN,
+        GET,
+        POST,
+        PUT
+    }
+
 
     private class DelayedConversion {
 
-       // public HttpHeaders headers;
+        public INTEGRATION_TYPE type = INTEGRATION_TYPE.UNKNOWN;
+        public INTEGRATION_VERB verb = INTEGRATION_VERB.UNKNOWN;
+        public String endpoint;
+        public String topic;
+        public String urlparam;
+        public KeyValue headers= new KeyValue();
         public ChipstackPayload chirpstack;
+        public HeliumPayload helium = null;
+
+        public int retry = 0;
+        public long lastTrial=0;
+        public long lastRecheck = 0;
 
     }
 
 
-    public void asyncProcessPayload(HttpServletRequest req, ChipstackPayload c) {
+    public boolean asyncProcessPayload(HttpServletRequest req, ChipstackPayload c) {
 
         DelayedConversion dc = new DelayedConversion();
         dc.chirpstack = c;
-      //  dc.headers = req.getHeaderNames();
-        asyncConversion.add(dc);
+        String type = req.getHeader("HELIUM_TYPE");
+        if (
+                type.compareToIgnoreCase("http") == 0
+            ||  type.compareToIgnoreCase("tago") == 0
+        ) {
+            // basically HTTP integration
+            dc.type = INTEGRATION_TYPE.HTTP;
+            String v = req.getHeader("HELIUM_VERB");
+            if ( v.compareToIgnoreCase("post") == 0 ) dc.verb = INTEGRATION_VERB.POST;
+            else if ( v.compareToIgnoreCase("get") == 0 ) dc.verb = INTEGRATION_VERB.GET;
+            else if ( v.compareToIgnoreCase("put") == 0 ) dc.verb = INTEGRATION_VERB.PUT;
+            dc.endpoint = req.getHeader("HELIUM_ENDPOINT");
+            dc.urlparam = req.getHeader("HELIUM_URLPARAM");
+            String headers = req.getHeader("HELIUM_HEADERS");
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                dc.headers = mapper.readValue(headers, KeyValue.class);
+            } catch (JsonProcessingException e) {
+                log.error("Error in parsing Headers for "+c.getDeviceInfo().getDevEui());
+                dc.headers = new KeyValue();
+            }
+            // check
+            if ( dc.endpoint.length() < 5 ) return false;
+            if ( dc.verb == INTEGRATION_VERB.UNKNOWN ) return false;
+            if ( ! dc.endpoint.startsWith("http") ) return false;
+            if ( dc.endpoint.contains("internal/3.0") ) return false;
 
+        }
+        if ( type.compareToIgnoreCase("mqtt") == 0 ) {
+            dc.type = INTEGRATION_TYPE.MQTT;
+            dc.topic = req.getHeader("HELIUM_TOPIC");
+            dc.endpoint = req.getHeader("HELIUM_ENDPOINT");
+            if ( dc.endpoint.length() < 5 ) return false;
+            if ( ! dc.endpoint.startsWith("mqtt") ) return false;
+            if ( dc.topic.length() < 2 ) return false;
+        }
+        // type.compareToIgnoreCase("google_sheets") == 0
+        asyncConversion.add(dc);
+        return true;
     }
 
 
@@ -87,16 +154,44 @@ public class PayloadService {
             DelayedConversion w;
             while ( (w = queue.poll()) != null || asyncPayloadEnable ) {
                 if ( w != null) {
-                    HeliumPayload h = getHeliumPayload(w.chirpstack);
+                    // retrial limited to 3 attempt and every 10 seconds
+                    long now = Now.NowUtcMs();
+                    if ( w.retry > 0 && ((now - w.lastTrial) < 10_000 ) ) {
+                        if ( (now - w.lastRecheck) < 500 ) {
+                            // recheck too fast
+                            try {
+                                Thread.sleep(100);
+                            } catch ( InterruptedException x) {}
+                        }
+                        w.lastRecheck = now;
+                        queue.add(w);
+                    } else {
 
-                    try {
-                        ObjectMapper mapper = new ObjectMapper();
-                        log.info(mapper.writeValueAsString(h));
-                    } catch (JsonProcessingException e) {
-                        log.error(e.getMessage());
-                        e.printStackTrace();
+                        w.helium = getHeliumPayload(w.chirpstack);
+
+                        // trace
+                        try {
+                            ObjectMapper mapper = new ObjectMapper();
+                            log.info(mapper.writeValueAsString(w.helium));
+                        } catch (JsonProcessingException e) {
+                            log.error(e.getMessage());
+                            e.printStackTrace();
+                        }
+
+                        // apply integration
+                        if (w.type == INTEGRATION_TYPE.HTTP) {
+                            if (!processHttp(w)) {
+                                w.retry++;
+                                if (w.retry < 3) {
+                                    w.lastTrial = Now.NowUtcMs();
+                                    w.lastRecheck = w.lastTrial;
+                                    queue.add(w);
+                                }
+                            }
+                        }
+
+
                     }
-
                 } else {
                     try {
                         Thread.sleep(10);
@@ -162,7 +257,7 @@ public class PayloadService {
           hh.setSnr(rx.getSnr());
           hh.setSpreading("NA");
           hh.setStatus("success");
-          hh.setFrequency(c.getTxInfo().getFrequency());
+          hh.setFrequency(c.getTxInfo().getFrequency()/1_000_000.0);
           hs.add(hh);
         }
         h.setHotspots(hs);
@@ -182,5 +277,48 @@ public class PayloadService {
         return h;
     }
 
+    // ----------------------------------
+    // Process HTTP
+    // ----------------------------------
+    protected boolean processHttp(
+            DelayedConversion o
+    ) {
+
+        RestTemplate restTemplate = new RestTemplate();
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
+            for ( String k : o.headers.getEntry().keySet() ) {
+                headers.add(k,o.headers.getOneKey(k));
+            }
+            HttpEntity<String> he = new HttpEntity<String>(headers);
+            String url=o.endpoint;
+            HttpMethod m;
+            switch (o.verb) {
+                default:
+                case GET: m = HttpMethod.GET; break;
+                case POST: m = HttpMethod.POST; break;
+                case PUT: m = HttpMethod.PUT; break;
+            }
+            ResponseEntity<String> responseEntity =
+                    restTemplate.exchange(
+                            url,
+                            m,
+                            he,
+                            String.class
+                    );
+            if ( responseEntity.getStatusCode().is2xxSuccessful() ) {
+                return true;
+            }
+            return false;
+
+        } catch (HttpClientErrorException e) {
+            return false;
+        } catch (HttpServerErrorException e) {
+            return false;
+        } catch (Exception x ) {
+            return false;
+        }
+    }
 
 }

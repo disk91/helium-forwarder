@@ -69,15 +69,6 @@ public class HntHotspot {
     protected String status;
 
 
-    // --- CUSTOM
-
-    public String getBackendHostpotId() {
-        return "HNT-"+name;
-    }
-
-    // -----
-
-
     public String getId() {
         return id;
     }
