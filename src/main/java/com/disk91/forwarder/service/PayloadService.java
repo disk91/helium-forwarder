@@ -22,11 +22,8 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
+import java.util.Enumeration;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Service
@@ -49,9 +46,11 @@ public class PayloadService {
 
     @PostConstruct
     private void onStart() {
+        log.info("Starting PayloadService");
         threadRunning = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
         threads = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
         for ( int q = 0 ; q < forwarderConfig.getHeliumAsyncProcessor() ; q++) {
+            log.debug("Prepare Thread "+q);
             threadRunning[q] = Boolean.FALSE;
             Runnable r = new ProcessPayload(q,asyncConversion,threadRunning[q]);
             threads[q] = new Thread(r);
@@ -95,20 +94,30 @@ public class PayloadService {
 
         DelayedConversion dc = new DelayedConversion();
         dc.chirpstack = c;
-        String type = req.getHeader("HELIUM_TYPE");
+        /* --- liste headers
+        Enumeration<String> ss = req.getHeaderNames();
+        while (ss.hasMoreElements()) {
+            String s = ss.nextElement();
+            log.debug("Header :"+s+ " v: "+req.getHeader(s));
+        }
+        */
+
+        String type = req.getHeader("htype");
+        if ( type == null ) return false; // not a valid payload
         if (
                 type.compareToIgnoreCase("http") == 0
             ||  type.compareToIgnoreCase("tago") == 0
         ) {
+            log.debug("Got a Http Integration");
             // basically HTTP integration
             dc.type = INTEGRATION_TYPE.HTTP;
-            String v = req.getHeader("HELIUM_VERB");
+            String v = req.getHeader("hverb");
             if ( v.compareToIgnoreCase("post") == 0 ) dc.verb = INTEGRATION_VERB.POST;
             else if ( v.compareToIgnoreCase("get") == 0 ) dc.verb = INTEGRATION_VERB.GET;
             else if ( v.compareToIgnoreCase("put") == 0 ) dc.verb = INTEGRATION_VERB.PUT;
-            dc.endpoint = req.getHeader("HELIUM_ENDPOINT");
-            dc.urlparam = req.getHeader("HELIUM_URLPARAM");
-            String headers = req.getHeader("HELIUM_HEADERS");
+            dc.endpoint = req.getHeader("hendpoint");
+            dc.urlparam = req.getHeader("hurlparam");
+            String headers = req.getHeader("hheaders");
             try {
                 ObjectMapper mapper = new ObjectMapper();
                 dc.headers = mapper.readValue(headers, KeyValue.class);
@@ -119,19 +128,19 @@ public class PayloadService {
             // check
             if ( dc.endpoint.length() < 5 ) return false;
             if ( dc.verb == INTEGRATION_VERB.UNKNOWN ) return false;
-            if ( ! dc.endpoint.startsWith("http") ) return false;
+            if ( ! dc.endpoint.toLowerCase().startsWith("http") ) return false;
             if ( dc.endpoint.contains("internal/3.0") ) return false;
-
         }
         if ( type.compareToIgnoreCase("mqtt") == 0 ) {
             dc.type = INTEGRATION_TYPE.MQTT;
-            dc.topic = req.getHeader("HELIUM_TOPIC");
-            dc.endpoint = req.getHeader("HELIUM_ENDPOINT");
+            dc.topic = req.getHeader("huptopic");
+            dc.endpoint = req.getHeader("hendpoint");
             if ( dc.endpoint.length() < 5 ) return false;
             if ( ! dc.endpoint.startsWith("mqtt") ) return false;
             if ( dc.topic.length() < 2 ) return false;
         }
         // type.compareToIgnoreCase("google_sheets") == 0
+        log.debug("Add Frame in queue");
         asyncConversion.add(dc);
         return true;
     }
@@ -154,6 +163,7 @@ public class PayloadService {
             DelayedConversion w;
             while ( (w = queue.poll()) != null || asyncPayloadEnable ) {
                 if ( w != null) {
+                    log.debug("Find one in queue");
                     // retrial limited to 3 attempt and every 10 seconds
                     long now = Now.NowUtcMs();
                     if ( w.retry > 0 && ((now - w.lastTrial) < 10_000 ) ) {
@@ -172,7 +182,7 @@ public class PayloadService {
                         // trace
                         try {
                             ObjectMapper mapper = new ObjectMapper();
-                            log.info(mapper.writeValueAsString(w.helium));
+                            log.debug(">> "+mapper.writeValueAsString(w.helium));
                         } catch (JsonProcessingException e) {
                             log.error(e.getMessage());
                             e.printStackTrace();
@@ -291,15 +301,17 @@ public class PayloadService {
             for ( String k : o.headers.getEntry().keySet() ) {
                 headers.add(k,o.headers.getOneKey(k));
             }
-            HttpEntity<String> he = new HttpEntity<String>(headers);
+            HttpEntity<HeliumPayload> he = new HttpEntity<HeliumPayload>(o.helium,headers);
             String url=o.endpoint;
             HttpMethod m;
             switch (o.verb) {
                 default:
-                case GET: m = HttpMethod.GET; break;
+                //case GET: m = HttpMethod.GET; break;
                 case POST: m = HttpMethod.POST; break;
                 case PUT: m = HttpMethod.PUT; break;
             }
+
+            log.debug("Do "+m.name()+" to "+url);
             ResponseEntity<String> responseEntity =
                     restTemplate.exchange(
                             url,
