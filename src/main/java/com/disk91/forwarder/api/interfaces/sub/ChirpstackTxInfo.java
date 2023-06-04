@@ -14,7 +14,13 @@ public class ChirpstackTxInfo {
                 "spreadingFactor":9,
                 "codeRate":"CR_4_5"
             }
-        }
+        },
+        // TxAck can have this
+        "timing": {
+            "delay": {
+                "delay": "1s"
+            }
+        },
     }
      */
 

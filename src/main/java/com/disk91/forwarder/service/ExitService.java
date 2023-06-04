@@ -22,8 +22,10 @@ package com.disk91.forwarder.service;
 
 import com.disk91.forwarder.ForwarderApplication;
 import fr.ingeniousthings.tools.Now;
+import fr.ingeniousthings.tools.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PreDestroy;
@@ -43,6 +45,8 @@ public class ExitService {
         return this.exiting;
     }
 
+    @Autowired
+    protected PayloadService payloadService;
 
     @PreDestroy
     public void onCallExit() {
@@ -55,8 +59,9 @@ public class ExitService {
 
         // ------------------------------------------------
         log.info("Exit - stop services");
+        payloadService.closeService();
 
-
+        /*
         int services = 0;
         s = Now.NowUtcMs();
         long d = s;
@@ -72,16 +77,14 @@ public class ExitService {
                 break;
             }
         } while (services > 0);
+        */
 
         // ------------------------------------------------
-        log.info("Exit - commit caches");
+        //log.info("Exit - commit caches");
 
         log.info("Exit - completed");
         this.exiting = true;
-        try {
-            // not ideal but let some time to finish everythings
-            Thread.sleep(1_000);
-        } catch (InterruptedException e) {};
+        Tools.sleep(500);
         ForwarderApplication.exit();
     }
 

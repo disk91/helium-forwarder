@@ -5,7 +5,9 @@ import com.disk91.forwarder.api.interfaces.ChipstackPayload;
 import com.disk91.forwarder.api.interfaces.HeliumDownlink;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.api.interfaces.sub.*;
+import com.disk91.forwarder.service.itf.ChirpstackEnqueue;
 import com.disk91.forwarder.service.itf.HotspotPosition;
+import com.disk91.forwarder.service.itf.sub.QueueItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.ingeniousthings.tools.*;
@@ -30,6 +32,44 @@ public class PayloadService {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
+    protected boolean uplinkOpen = true;
+    protected boolean downlinkOpen = true;
+    boolean asyncUplinkEnable = true;
+    boolean asyncDownlinkEnable = true;
+
+    public void closeService() {
+        // stop reception
+        log.info("Closing Uplink");
+        this.uplinkOpen = false;
+        Tools.sleep(500);
+        // stop Thread once queues are empty
+        this.asyncUplinkEnable = false;
+        log.info("Waiting for downlink expiration");
+        for ( int i = 0 ; i < DOWNLINK_EXPIRATION ; i += 1000 ) {
+            Tools.sleep(1000);
+            log.info("Progress : "+Math.floor((100*i)/DOWNLINK_EXPIRATION)+"%");
+        }
+        log.info("Closing Downlink");
+        this.downlinkOpen = false;
+        Tools.sleep(500);
+        this.asyncDownlinkEnable = false;
+
+        boolean terminated = false;
+        while ( !terminated ) {
+            terminated = true;
+            for (int t = 0; t < forwarderConfig.getHeliumAsyncProcessor(); t++) {
+                if (uplinkThreads[t].getState() != Thread.State.TERMINATED) terminated = false;
+                if (downlinkThreads[t].getState() != Thread.State.TERMINATED) terminated = false;
+            }
+            Tools.sleep(100);
+        }
+        log.info("Payload Service closed");
+    }
+
+
+    @Autowired
+    protected PrometeusService prometeusService;
+
     @Autowired
     protected LocationService locationService;
 
@@ -37,23 +77,22 @@ public class PayloadService {
     protected ForwarderConfig forwarderConfig;
 
     Boolean threadRunningUplink[];
-    Thread threadsUplink[];
+    Thread uplinkThreads[];
 
     protected ConcurrentLinkedQueue<DelayedUplink> asyncUplink = new ConcurrentLinkedQueue<>();
-    boolean asyncPayloadEnable = true;
 
 
     @PostConstruct
     private void onStart() {
         log.info("Starting PayloadService");
         threadRunningUplink = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
-        threadsUplink = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
+        uplinkThreads = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
         for ( int q = 0 ; q < forwarderConfig.getHeliumAsyncProcessor() ; q++) {
             log.debug("Prepare Thread "+q);
             threadRunningUplink[q] = Boolean.FALSE;
             Runnable r = new ProcessUplink(q, asyncUplink, threadRunningUplink[q]);
-            threadsUplink[q] = new Thread(r);
-            threadsUplink[q].start();
+            uplinkThreads[q] = new Thread(r);
+            uplinkThreads[q].start();
         }
     }
 
@@ -81,6 +120,8 @@ public class PayloadService {
 
 
     public boolean asyncProcessUplink(HttpServletRequest req, ChipstackPayload c) {
+
+        if (!this.uplinkOpen) return false;
 
         DelayedUplink dc = new DelayedUplink();
         dc.chirpstack = c;
@@ -132,6 +173,7 @@ public class PayloadService {
         // type.compareToIgnoreCase("google_sheets") == 0
         log.debug("Add Frame in queue");
         asyncUplink.add(dc);
+        prometeusService.addUplinkInQueue();
         return true;
     }
 
@@ -151,9 +193,8 @@ public class PayloadService {
             this.status = true;
             log.debug("Starting Payload process thread "+id);
             DelayedUplink w;
-            while ( (w = queue.poll()) != null || asyncPayloadEnable ) {
+            while ( (w = queue.poll()) != null || asyncUplinkEnable ) {
                 if ( w != null) {
-                    log.debug("Find one in queue");
                     // retrial limited to 3 attempt and every 10 seconds
                     long now = Now.NowUtcMs();
                     if ( w.retry > 0 && ((now - w.lastTrial) < 10_000 ) ) {
@@ -166,7 +207,8 @@ public class PayloadService {
                         w.lastRecheck = now;
                         queue.add(w);
                     } else {
-
+                        log.debug("Find one in uplink queue");
+                        prometeusService.remUplinkInQueue();
                         w.helium = getHeliumPayload(w.chirpstack);
 
                         // trace
@@ -183,9 +225,13 @@ public class PayloadService {
                             if (!processHttp(w)) {
                                 w.retry++;
                                 if (w.retry < 3) {
+                                    prometeusService.addUplinkRetry();
+                                    prometeusService.addUplinkInQueue();
                                     w.lastTrial = Now.NowUtcMs();
                                     w.lastRecheck = w.lastTrial;
                                     queue.add(w);
+                                } else {
+                                    prometeusService.addUplinkFailure();
                                 }
                             }
                         }
@@ -327,6 +373,8 @@ public class PayloadService {
     // DONWLINK Session
     // ==========================================================
 
+    protected static final long DOWNLINK_EXPIRATION = (2*Now.ONE_MINUTE);
+
     protected enum DOWN_SESSION_TYPE { HTTP, MQTT };
     protected class DownlinkSession implements ClonnableObject<DownlinkSession> {
         // 32 char random key for a unique sessionkey
@@ -356,7 +404,7 @@ public class PayloadService {
     @PostConstruct
     private void initDownlinkSessionCache() {
         log.debug("initDownlinkSessionCache initialization");
-        this.downlinkCache = new ObjectCache<String, DownlinkSession>("DownlinkCache", 100000, 1*Now.ONE_HOUR) {
+        this.downlinkCache = new ObjectCache<String, DownlinkSession>("DownlinkCache", 100000, DOWNLINK_EXPIRATION) {
             @Override
             public void onCacheRemoval(String key, DownlinkSession obj, boolean batch, boolean last) {
                 // nothing to do, readOnly
@@ -373,7 +421,7 @@ public class PayloadService {
         DownlinkSession d = new DownlinkSession();
         d.type = t;
         d.creationTime = Now.NowUtcMs();
-        d.key = RandomString.getRandomAZString(32);
+        d.key = RandomString.getRandomAz9String(32);
         d.devEui = c.getDeviceInfo().getDevEui();
         downlinkCache.put(d,d.key);
         return d.key;
@@ -389,7 +437,10 @@ public class PayloadService {
     private class DelayedDownlink {
         public DOWNLINK_TYPE type = DOWNLINK_TYPE.UNKNOWN;
         public String devEui;
-        public byte[] payload;
+        public String payloadB64;
+
+        public boolean confirmed;
+        public int port;
         public int retry = 0;
         public long lastTrial=0;
         public long lastRecheck = 0;
@@ -398,48 +449,59 @@ public class PayloadService {
     Boolean downlinkThreadRunning[];
     Thread downlinkThreads[];
 
-    protected ConcurrentLinkedQueue<DelayedDownlink> asyncDownlink = new ConcurrentLinkedQueue<>();
-    boolean asyncDownlinkEnable = true;
-
+    protected ConcurrentLinkedQueue<DelayedDownlink> asyncDownlink[];
 
     @PostConstruct
     private void onStartDownlink() {
         log.info("Starting DownlinkService");
+        asyncDownlink = new ConcurrentLinkedQueue[forwarderConfig.getHeliumAsyncProcessor()];
         downlinkThreadRunning = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
         downlinkThreads = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
         for ( int q = 0 ; q < forwarderConfig.getHeliumAsyncProcessor() ; q++) {
             log.debug("Prepare Downlink Thread "+q);
             downlinkThreadRunning[q] = Boolean.FALSE;
-            Runnable r = new ProcessDownlink(q,asyncDownlink,downlinkThreadRunning[q]);
+            asyncDownlink[q] = new ConcurrentLinkedQueue<DelayedDownlink>();
+            Runnable r = new ProcessDownlink(q,asyncDownlink[q],downlinkThreadRunning[q]);
             downlinkThreads[q] = new Thread(r);
             downlinkThreads[q].start();
         }
     }
 
-    public boolean asyncProcessDownlink(HttpServletRequest req, String key, HeliumDownlink d) {
+    public synchronized boolean asyncProcessDownlink(HttpServletRequest req, String key, HeliumDownlink d) {
+        if (!this.downlinkOpen) return false;
 
         // search for the downlink session
         DownlinkSession ds = downlinkCache.get(key);
         if ( ds == null ) return false;
         if ( ds.type != DOWN_SESSION_TYPE.HTTP ) return false;
-        if ( (Now.NowUtcMs() - ds.creationTime ) > Now.ONE_HOUR ) return false;
+        if ( (Now.NowUtcMs() - ds.creationTime ) > DOWNLINK_EXPIRATION) return false;
+
+        prometeusService.updateDownlinkCacheSize(downlinkCache.cacheSize());
 
         DelayedDownlink dl = new DelayedDownlink();
         dl.devEui = ds.devEui;
         String s = new String(Base64.decodeBase64(d.getPayload_raw()));
         if ( s.compareToIgnoreCase("__clear_downlink_queue__") == 0 ) {
             dl.type = DOWNLINK_TYPE.CLEAR;
-            dl.payload = new byte[1];
+            dl.payloadB64 = null;
+            dl.port = 0;
         } else {
             dl.type = DOWNLINK_TYPE.NORMAL;
-            dl.payload = Base64.decodeBase64(d.getPayload_raw());
+            dl.payloadB64 = d.getPayload_raw(); // Base 64
+            dl.port = d.getPort();
+            dl.confirmed = d.isConfirmed();
         }
         dl.lastTrial = 0;
         dl.retry = 0;
         dl.lastRecheck = 0;
 
         log.debug("Add Downlink in queue");
-        asyncDownlink.add(dl);
+        prometeusService.addUplinkInQueue();
+
+        // store the same deveui in the same queue
+        int q = Tools.EuiStringToByteArray(dl.devEui)[5];
+        if ( q < 0 ) q += 256;
+        asyncDownlink[ q % forwarderConfig.getHeliumAsyncProcessor() ].add(dl);
         return true;
     }
 
@@ -458,45 +520,139 @@ public class PayloadService {
             this.status = true;
             log.debug("Starting Downlink process thread "+id);
             DelayedDownlink w;
-            while ( (w = queue.poll()) != null || asyncPayloadEnable ) {
+            while ( (w = queue.poll()) != null || asyncDownlinkEnable ) {
                 if ( w != null) {
-                    log.debug("Find one in queue");
                     // retrial limited to 3 attempt and every 10 seconds
                     long now = Now.NowUtcMs();
                     if ( w.retry > 0 && ((now - w.lastTrial) < 10_000 ) ) {
                         if ( (now - w.lastRecheck) < 500 ) {
                             // recheck too fast
-                            try {
-                                Thread.sleep(100);
-                            } catch ( InterruptedException x) {}
+                            Tools.sleep(100);
                         }
                         w.lastRecheck = now;
                         queue.add(w);
                     } else {
-
-
-                        // apply integration
+                        log.debug("Find one in downlink queue");
+                        prometeusService.remDownlinkInQueue();
+                        // apply downlink
                         if (w.type == DOWNLINK_TYPE.NORMAL) {
-                            if ( ) {
+                            if ( ! processDownlink(w) ) {
                                 w.retry++;
                                 if (w.retry < 3) {
+                                    prometeusService.addDownlinkInQueue();
+                                    prometeusService.addDownlinkRetry();
                                     w.lastTrial = Now.NowUtcMs();
                                     w.lastRecheck = w.lastTrial;
                                     queue.add(w);
+                                } else {
+                                    prometeusService.addDownlinkFailure();
+                                }
+                            }
+                        } else if ( w.type == DOWNLINK_TYPE.CLEAR ) {
+                            prometeusService.remDownlinkInQueue();
+                            if ( ! processDownlinkClear(w) ) {
+                                w.retry++;
+                                if (w.retry < 3) {
+                                    prometeusService.addDownlinkInQueue();
+                                    prometeusService.addDownlinkRetry();
+                                    w.lastTrial = Now.NowUtcMs();
+                                    w.lastRecheck = w.lastTrial;
+                                    queue.add(w);
+                                } else {
+                                    prometeusService.addDownlinkFailure();
                                 }
                             }
                         }
                     }
                 } else {
-                    try {
-                        Thread.sleep(10);
-                    } catch (InterruptedException x) {x.printStackTrace();}
+                    Tools.sleep(10);
                 }
             }
             log.debug("Closing Downlink process thread "+id);
         }
     }
 
+
+    // ----------------------------------
+    // Process Downlink
+    // ----------------------------------
+    protected boolean processDownlink(
+            DelayedDownlink o
+    ) {
+        // create downlink structure
+        ChirpstackEnqueue e = new ChirpstackEnqueue();
+        e.setQueueItem(new QueueItem());
+        e.getQueueItem().setConfirmed(o.confirmed);
+        e.getQueueItem().setfPort(o.port);
+        e.getQueueItem().setData(o.payloadB64);
+
+        RestTemplate restTemplate = new RestTemplate();
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
+            headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+            headers.add(HttpHeaders.AUTHORIZATION, "Bearer "+forwarderConfig.getChirpstackApiAdminKey());
+            HttpEntity<ChirpstackEnqueue> he = new HttpEntity<ChirpstackEnqueue>(e,headers);
+            String url=forwarderConfig.getChirpstackApiBase()+"/api/devices/"+o.devEui+"/queue";
+            log.debug("Do down "+o.devEui+" with "+Stuff.bytesToHex(Base64.decodeBase64(o.payloadB64))+" ( "+e.getQueueItem().getData() + " ) on port "+e.getQueueItem().getfPort());
+            ResponseEntity<String> responseEntity =
+                    restTemplate.exchange(
+                            url,
+                            HttpMethod.POST,
+                            he,
+                            String.class
+                    );
+            if ( responseEntity.getStatusCode().is2xxSuccessful() ) {
+                return true;
+            }
+            return false;
+        } catch (HttpClientErrorException x) {
+            log.debug("Dwn - Client error - "+x.getMessage());
+            return false;
+        } catch (HttpServerErrorException x) {
+            log.debug("Dwn - Server error - "+x.getMessage());
+            return false;
+        } catch (Exception x ) {
+            log.debug("Dwn - error - "+x.getMessage());
+            return false;
+        }
+    }
+
+    protected boolean processDownlinkClear(
+            DelayedDownlink o
+    ) {
+
+        RestTemplate restTemplate = new RestTemplate();
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
+            headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+            headers.add(HttpHeaders.AUTHORIZATION, "Bearer "+forwarderConfig.getChirpstackApiAdminKey());
+            HttpEntity he = new HttpEntity(headers);
+            String url=forwarderConfig.getChirpstackApiBase()+"/api/devices/"+o.devEui+"/queue";
+            log.debug("Do down "+o.devEui+" clear ");
+            ResponseEntity<String> responseEntity =
+                    restTemplate.exchange(
+                            url,
+                            HttpMethod.DELETE,
+                            he,
+                            String.class
+                    );
+            if ( responseEntity.getStatusCode().is2xxSuccessful() ) {
+                return true;
+            }
+            return false;
+        } catch (HttpClientErrorException e) {
+            log.debug("Dwn Clear - Client error - "+e.getMessage());
+            return false;
+        } catch (HttpServerErrorException e) {
+            log.debug("Dwn Clear - Server error - "+e.getMessage());
+            return false;
+        } catch (Exception x ) {
+            log.debug("Dwn Clear - error - "+x.getMessage());
+            return false;
+        }
+    }
 
 
 }

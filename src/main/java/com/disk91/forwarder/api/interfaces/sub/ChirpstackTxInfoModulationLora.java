@@ -21,7 +21,7 @@ public class ChirpstackTxInfoModulationLora {
     private int bandwidth;
     private int spreadingFactor;
     private String codeRate;
-
+    private boolean polarizationInversion = false;
     // ---
 
 
@@ -47,5 +47,13 @@ public class ChirpstackTxInfoModulationLora {
 
     public void setCodeRate(String codeRate) {
         this.codeRate = codeRate;
+    }
+
+    public boolean isPolarizationInversion() {
+        return polarizationInversion;
+    }
+
+    public void setPolarizationInversion(boolean polarizationInversion) {
+        this.polarizationInversion = polarizationInversion;
     }
 }

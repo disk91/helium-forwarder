@@ -60,6 +60,24 @@ public class RandomString {
         return s;
     }
 
+
+    public static String getRandomAz9String(int size) {
+        String alpha="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        SecureRandom r = new SecureRandom();
+        String s = "";
+        int A = "A".getBytes()[0];
+
+        for ( int i = 0 ; i < size ; i++ ) {
+
+            int v = r.nextInt() % alpha.length();
+            if ( v < 0 ) v = -v;
+            s += alpha.charAt(v);
+
+        }
+        return s;
+    }
+
+
     public static String getRandomHexString(int size) {
         SecureRandom r = new SecureRandom();
         String all = "0123456789ABCDEF";

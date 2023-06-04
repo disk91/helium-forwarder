@@ -112,6 +112,11 @@ public class ForwarderConfig {
     @Value ("${helium.downlink.endpoint}")
     private String heliumDownlinkEndpoint;
 
+    @Value ("${chirpstack.api.base}")
+    private String chirpstackApiBase;
+
+    @Value ("${chirpstack.api.admin.key}")
+    private String chirpstackApiAdminKey;
 
     public int getHeliumAsyncProcessorDefault() {
         return heliumAsyncProcessorDefault;
@@ -128,5 +133,13 @@ public class ForwarderConfig {
 
     public String getHeliumDownlinkEndpoint() {
         return heliumDownlinkEndpoint;
+    }
+
+    public String getChirpstackApiBase() {
+        return chirpstackApiBase;
+    }
+
+    public String getChirpstackApiAdminKey() {
+        return chirpstackApiAdminKey;
     }
 }

@@ -40,4 +40,10 @@ public class Tools {
         return out;
     }
 
+    public static void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch ( InterruptedException x ) {};
+    }
+
 }

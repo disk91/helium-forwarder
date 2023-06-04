@@ -110,11 +110,25 @@ public class ChipstackPayload {
 
     private ChirpstackTxInfo txInfo;
 
-    // Specific to error message (for bypassing)
+    // Log message
     private String level;
     private String code;
     private String description;
 
+    // status message
+
+    private int margin=0;
+    private double batteryLevel=0.0;
+
+    // ack Message (for downlink)
+
+    private String queueItemId="";
+    private boolean acknowledged=false;
+    private int fCntDown=0;
+
+    // txAck
+    // uses queueItemId, fCntDown
+    private String gatewayId;
 
     // ---
 
@@ -244,5 +258,53 @@ public class ChipstackPayload {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public int getMargin() {
+        return margin;
+    }
+
+    public void setMargin(int margin) {
+        this.margin = margin;
+    }
+
+    public double getBatteryLevel() {
+        return batteryLevel;
+    }
+
+    public void setBatteryLevel(double batteryLevel) {
+        this.batteryLevel = batteryLevel;
+    }
+
+    public String getQueueItemId() {
+        return queueItemId;
+    }
+
+    public void setQueueItemId(String queueItemId) {
+        this.queueItemId = queueItemId;
+    }
+
+    public boolean isAcknowledged() {
+        return acknowledged;
+    }
+
+    public void setAcknowledged(boolean acknowledged) {
+        this.acknowledged = acknowledged;
+    }
+
+    public int getfCntDown() {
+        return fCntDown;
+    }
+
+    public void setfCntDown(int fCntDown) {
+        this.fCntDown = fCntDown;
+    }
+
+    public String getGatewayId() {
+        return gatewayId;
+    }
+
+    public void setGatewayId(String gatewayId) {
+        this.gatewayId = gatewayId;
     }
 }

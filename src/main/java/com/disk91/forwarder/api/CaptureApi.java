@@ -6,6 +6,7 @@ import com.disk91.forwarder.service.PayloadService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -45,9 +46,11 @@ public class CaptureApi {
             method= RequestMethod.POST)
     public ResponseEntity<?> postChirpstackMessage(
             HttpServletRequest request,
+            @Parameter(required = true, name = "event", description = "Get the type of event ( impacts body structure )")
+            @RequestParam("event") String event,
             @RequestBody(required = true)  ChipstackPayload /* String */  message
     ) {
-/* */
+/*
         try {
             ObjectMapper mapper = new ObjectMapper();
             log.info("## "+mapper.writeValueAsString(message));
@@ -55,9 +58,19 @@ public class CaptureApi {
             log.error(e.getMessage());
             e.printStackTrace();
         }
-/* */
+ */
 
-        if ( message.getRxInfo() == null || message.getRxInfo().size() == 0 ) {
+        // events :
+        //  - join
+        //  - up => uplink
+        //  - txack => what hotspots acked the tx
+        //  - status => radio quality info
+        //  - ack => confirm downlink ack
+        //  - log => error
+        //  - location => position
+        //  - integration => related to integration
+
+        if ( event.compareToIgnoreCase("up") != 0 ) {
             // join message or error message
             return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.NO_CONTENT);
         }

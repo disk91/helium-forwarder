@@ -396,6 +396,8 @@ public abstract class ObjectCache<K, T extends ClonnableObject<T>> {
         return (int)Math.floor(((100*this.cacheSize) / this.maxCacheSize));
     }
 
+    public long cacheSize() { return this.cacheSize; }
+
     // Before clearing the cache, we want to sync the modifications
     // or just to make it on regular basis, expired object are also removed
     public void flush() {
