@@ -28,54 +28,68 @@ public class ChipstackPayload {
                 "label":"Without label"
             }
          },
-    "devAddr":"480007a0",
-    "dr":3,
-    "adr":false,
-    "fCnt":22772,
-    "fPort":1,
-    "confirmed":false,
-    "data":"HQ==",
-    "object":{
-        "other":"123",
-        "temp":22.5
-    },
-    "rxInfo":[
-        {
-            "gatewayId":"c986398a305dee5a",
-            "uplinkId":65489,
-            "time":"2023-05-29T19:50:10+00:00",
-            "rssi":-41,
-            "snr":7.8,
-            "context":"EbkTFA==",
-            "metadata":{
-                "region_common_name":"EU868",
-                "region_name":"eu868"
-            }
+        "devAddr":"480007a0",
+        "dr":3,
+        "adr":false,
+        "fCnt":22772,
+        "fPort":1,
+        "confirmed":false,
+        "data":"HQ==",
+        "object":{
+            "other":"123",
+            "temp":22.5
         },
-        {
-            "gatewayId":"3c408850a5b4f27c",
-            "uplinkId":11888,
-            "time":"2023-05-29T19:50:10+00:00",
-            "rssi":-22,
-            "snr":8.0,
-            "context":"yIKGwQ==",
-            "metadata":{
-                "region_common_name":"EU868",
-                "region_name":"eu868"
+        "rxInfo":[
+            {
+                "gatewayId":"c986398a305dee5a",
+                "uplinkId":65489,
+                "time":"2023-05-29T19:50:10+00:00",
+                "rssi":-41,
+                "snr":7.8,
+                "context":"EbkTFA==",
+                "metadata":{
+                    "region_common_name":"EU868",
+                    "region_name":"eu868"
+                }
+            },
+            {
+                "gatewayId":"3c408850a5b4f27c",
+                "uplinkId":11888,
+                "time":"2023-05-29T19:50:10+00:00",
+                "rssi":-22,
+                "snr":8.0,
+                "context":"yIKGwQ==",
+                "metadata":{
+                    "region_common_name":"EU868",
+                    "region_name":"eu868"
+                }
             }
-        }
-    ],
-    "txInfo":{
-        "frequency":867500000,
-        "modulation":{
-            "lora":{
-                "bandwidth":125000,
-                "spreadingFactor":9,
-                "codeRate":"CR_4_5"
+        ],
+        "txInfo":{
+            "frequency":867500000,
+            "modulation":{
+                "lora":{
+                    "bandwidth":125000,
+                    "spreadingFactor":9,
+                    "codeRate":"CR_4_5"
+                }
             }
         }
     }
-}
+
+    // when some error
+
+    "level":"ERROR",
+    "code":"OTAA",
+    "description":"DevNonce has already been used",
+    "context":{
+        "deduplication_id":"434fd441-a36c-4109-ad8d-58bbc4263092"
+    }
+
+    // when Join
+
+    rxInfo and txInfo are empty
+
      */
 
 
@@ -95,6 +109,12 @@ public class ChipstackPayload {
     private List<ChirpstackRxInfo> rxInfo;
 
     private ChirpstackTxInfo txInfo;
+
+    // Specific to error message (for bypassing)
+    private String level;
+    private String code;
+    private String description;
+
 
     // ---
 
@@ -200,5 +220,29 @@ public class ChipstackPayload {
 
     public void setObject(KeyValue object) {
         this.object = object;
+    }
+
+    public String getLevel() {
+        return level;
+    }
+
+    public void setLevel(String level) {
+        this.level = level;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

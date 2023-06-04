@@ -109,6 +109,10 @@ public class ForwarderConfig {
     @Value ("${helium.async.processor:0}")
     private int heliumAsyncProcessor;
 
+    @Value ("${helium.downlink.endpoint}")
+    private String heliumDownlinkEndpoint;
+
+
     public int getHeliumAsyncProcessorDefault() {
         return heliumAsyncProcessorDefault;
     }
@@ -122,4 +126,7 @@ public class ForwarderConfig {
         return heliumAsyncProcessorDefault;
     }
 
+    public String getHeliumDownlinkEndpoint() {
+        return heliumDownlinkEndpoint;
+    }
 }

@@ -2,15 +2,14 @@ package com.disk91.forwarder.service;
 
 import com.disk91.forwarder.ForwarderConfig;
 import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.api.interfaces.HeliumDownlink;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.api.interfaces.sub.*;
 import com.disk91.forwarder.service.itf.HotspotPosition;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import fr.ingeniousthings.tools.DateConverters;
-import fr.ingeniousthings.tools.ITNotFoundException;
-import fr.ingeniousthings.tools.ITParseException;
-import fr.ingeniousthings.tools.Now;
+import fr.ingeniousthings.tools.*;
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +22,7 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Service
@@ -37,42 +36,33 @@ public class PayloadService {
     @Autowired
     protected ForwarderConfig forwarderConfig;
 
-    Boolean threadRunning[];
-    Thread threads[];
+    Boolean threadRunningUplink[];
+    Thread threadsUplink[];
 
-    protected ConcurrentLinkedQueue<DelayedConversion> asyncConversion = new ConcurrentLinkedQueue<>();
+    protected ConcurrentLinkedQueue<DelayedUplink> asyncUplink = new ConcurrentLinkedQueue<>();
     boolean asyncPayloadEnable = true;
 
 
     @PostConstruct
     private void onStart() {
         log.info("Starting PayloadService");
-        threadRunning = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
-        threads = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
+        threadRunningUplink = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
+        threadsUplink = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
         for ( int q = 0 ; q < forwarderConfig.getHeliumAsyncProcessor() ; q++) {
             log.debug("Prepare Thread "+q);
-            threadRunning[q] = Boolean.FALSE;
-            Runnable r = new ProcessPayload(q,asyncConversion,threadRunning[q]);
-            threads[q] = new Thread(r);
-            threads[q].start();
+            threadRunningUplink[q] = Boolean.FALSE;
+            Runnable r = new ProcessUplink(q, asyncUplink, threadRunningUplink[q]);
+            threadsUplink[q] = new Thread(r);
+            threadsUplink[q].start();
         }
     }
 
-    protected enum INTEGRATION_TYPE {
-        UNKNOWN,
-        HTTP,
-        MQTT
-    }
+    protected enum INTEGRATION_TYPE { UNKNOWN, HTTP, MQTT }
 
-    protected enum INTEGRATION_VERB {
-        UNKNOWN,
-        GET,
-        POST,
-        PUT
-    }
+    protected enum INTEGRATION_VERB { UNKNOWN, GET, POST, PUT }
 
 
-    private class DelayedConversion {
+    private class DelayedUplink {
 
         public INTEGRATION_TYPE type = INTEGRATION_TYPE.UNKNOWN;
         public INTEGRATION_VERB verb = INTEGRATION_VERB.UNKNOWN;
@@ -90,11 +80,11 @@ public class PayloadService {
     }
 
 
-    public boolean asyncProcessPayload(HttpServletRequest req, ChipstackPayload c) {
+    public boolean asyncProcessUplink(HttpServletRequest req, ChipstackPayload c) {
 
-        DelayedConversion dc = new DelayedConversion();
+        DelayedUplink dc = new DelayedUplink();
         dc.chirpstack = c;
-        /* --- liste headers
+        /* --- list headers
         Enumeration<String> ss = req.getHeaderNames();
         while (ss.hasMoreElements()) {
             String s = ss.nextElement();
@@ -141,18 +131,18 @@ public class PayloadService {
         }
         // type.compareToIgnoreCase("google_sheets") == 0
         log.debug("Add Frame in queue");
-        asyncConversion.add(dc);
+        asyncUplink.add(dc);
         return true;
     }
 
 
-    public class ProcessPayload implements Runnable {
+    public class ProcessUplink implements Runnable {
 
         Boolean status;
         int id;
-        ConcurrentLinkedQueue<DelayedConversion> queue;
+        ConcurrentLinkedQueue<DelayedUplink> queue;
 
-        public ProcessPayload(int _id, ConcurrentLinkedQueue<DelayedConversion> _queue, Boolean _status) {
+        public ProcessUplink(int _id, ConcurrentLinkedQueue<DelayedUplink> _queue, Boolean _status) {
             id = _id;
             queue = _queue;
             status = _status;
@@ -160,7 +150,7 @@ public class PayloadService {
         public void run() {
             this.status = true;
             log.debug("Starting Payload process thread "+id);
-            DelayedConversion w;
+            DelayedUplink w;
             while ( (w = queue.poll()) != null || asyncPayloadEnable ) {
                 if ( w != null) {
                     log.debug("Find one in queue");
@@ -199,8 +189,6 @@ public class PayloadService {
                                 }
                             }
                         }
-
-
                     }
                 } else {
                     try {
@@ -243,8 +231,10 @@ public class PayloadService {
         h.setDev_eui(c.getDeviceInfo().getDevEui());
         h.setDevaddr(c.getDevAddr());
 
-        // todo downlink
-        h.setDownlink_url("todo");
+        String key =  createDownlinkSession(DOWN_SESSION_TYPE.HTTP,c);
+        String endpoint = forwarderConfig.getHeliumDownlinkEndpoint();
+        endpoint = endpoint.replace("{key}", key);
+        h.setDownlink_url(endpoint);
 
         h.setFcnt(c.getfCnt());
         h.setId(c.getDeduplicationId());
@@ -291,7 +281,7 @@ public class PayloadService {
     // Process HTTP
     // ----------------------------------
     protected boolean processHttp(
-            DelayedConversion o
+            DelayedUplink o
     ) {
 
         RestTemplate restTemplate = new RestTemplate();
@@ -332,5 +322,181 @@ public class PayloadService {
             return false;
         }
     }
+
+    // ==========================================================
+    // DONWLINK Session
+    // ==========================================================
+
+    protected enum DOWN_SESSION_TYPE { HTTP, MQTT };
+    protected class DownlinkSession implements ClonnableObject<DownlinkSession> {
+        // 32 char random key for a unique sessionkey
+        public String key;
+
+        // Corresponding device Eui
+        public String devEui;
+
+        // Creation time
+        public long creationTime;
+
+        // Session type
+        public DOWN_SESSION_TYPE type;
+
+        // ---
+
+        public DownlinkSession clone() {
+            DownlinkSession d = new DownlinkSession();
+            d.key = key;
+            d.devEui = devEui;
+            d.creationTime = creationTime;
+            d.type = type;
+            return d;
+        }
+    }
+    private ObjectCache<String, DownlinkSession> downlinkCache;
+    @PostConstruct
+    private void initDownlinkSessionCache() {
+        log.debug("initDownlinkSessionCache initialization");
+        this.downlinkCache = new ObjectCache<String, DownlinkSession>("DownlinkCache", 100000, 1*Now.ONE_HOUR) {
+            @Override
+            public void onCacheRemoval(String key, DownlinkSession obj, boolean batch, boolean last) {
+                // nothing to do, readOnly
+            }
+
+            @Override
+            public void bulkCacheUpdate(List<DownlinkSession> objects) {
+
+            }
+        };
+    }
+
+    protected String createDownlinkSession(DOWN_SESSION_TYPE t, ChipstackPayload c) {
+        DownlinkSession d = new DownlinkSession();
+        d.type = t;
+        d.creationTime = Now.NowUtcMs();
+        d.key = RandomString.getRandomAZString(32);
+        d.devEui = c.getDeviceInfo().getDevEui();
+        downlinkCache.put(d,d.key);
+        return d.key;
+    }
+
+    // ==========================================================
+    // DONWLINK MANAGEMENT
+    // ==========================================================
+
+
+    protected enum DOWNLINK_TYPE { UNKNOWN, NORMAL, CLEAR };
+
+    private class DelayedDownlink {
+        public DOWNLINK_TYPE type = DOWNLINK_TYPE.UNKNOWN;
+        public String devEui;
+        public byte[] payload;
+        public int retry = 0;
+        public long lastTrial=0;
+        public long lastRecheck = 0;
+    }
+
+    Boolean downlinkThreadRunning[];
+    Thread downlinkThreads[];
+
+    protected ConcurrentLinkedQueue<DelayedDownlink> asyncDownlink = new ConcurrentLinkedQueue<>();
+    boolean asyncDownlinkEnable = true;
+
+
+    @PostConstruct
+    private void onStartDownlink() {
+        log.info("Starting DownlinkService");
+        downlinkThreadRunning = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
+        downlinkThreads = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
+        for ( int q = 0 ; q < forwarderConfig.getHeliumAsyncProcessor() ; q++) {
+            log.debug("Prepare Downlink Thread "+q);
+            downlinkThreadRunning[q] = Boolean.FALSE;
+            Runnable r = new ProcessDownlink(q,asyncDownlink,downlinkThreadRunning[q]);
+            downlinkThreads[q] = new Thread(r);
+            downlinkThreads[q].start();
+        }
+    }
+
+    public boolean asyncProcessDownlink(HttpServletRequest req, String key, HeliumDownlink d) {
+
+        // search for the downlink session
+        DownlinkSession ds = downlinkCache.get(key);
+        if ( ds == null ) return false;
+        if ( ds.type != DOWN_SESSION_TYPE.HTTP ) return false;
+        if ( (Now.NowUtcMs() - ds.creationTime ) > Now.ONE_HOUR ) return false;
+
+        DelayedDownlink dl = new DelayedDownlink();
+        dl.devEui = ds.devEui;
+        String s = new String(Base64.decodeBase64(d.getPayload_raw()));
+        if ( s.compareToIgnoreCase("__clear_downlink_queue__") == 0 ) {
+            dl.type = DOWNLINK_TYPE.CLEAR;
+            dl.payload = new byte[1];
+        } else {
+            dl.type = DOWNLINK_TYPE.NORMAL;
+            dl.payload = Base64.decodeBase64(d.getPayload_raw());
+        }
+        dl.lastTrial = 0;
+        dl.retry = 0;
+        dl.lastRecheck = 0;
+
+        log.debug("Add Downlink in queue");
+        asyncDownlink.add(dl);
+        return true;
+    }
+
+    public class ProcessDownlink implements Runnable {
+
+        Boolean status;
+        int id;
+        ConcurrentLinkedQueue<DelayedDownlink> queue;
+
+        public ProcessDownlink(int _id, ConcurrentLinkedQueue<DelayedDownlink> _queue, Boolean _status) {
+            id = _id;
+            queue = _queue;
+            status = _status;
+        }
+        public void run() {
+            this.status = true;
+            log.debug("Starting Downlink process thread "+id);
+            DelayedDownlink w;
+            while ( (w = queue.poll()) != null || asyncPayloadEnable ) {
+                if ( w != null) {
+                    log.debug("Find one in queue");
+                    // retrial limited to 3 attempt and every 10 seconds
+                    long now = Now.NowUtcMs();
+                    if ( w.retry > 0 && ((now - w.lastTrial) < 10_000 ) ) {
+                        if ( (now - w.lastRecheck) < 500 ) {
+                            // recheck too fast
+                            try {
+                                Thread.sleep(100);
+                            } catch ( InterruptedException x) {}
+                        }
+                        w.lastRecheck = now;
+                        queue.add(w);
+                    } else {
+
+
+                        // apply integration
+                        if (w.type == DOWNLINK_TYPE.NORMAL) {
+                            if ( ) {
+                                w.retry++;
+                                if (w.retry < 3) {
+                                    w.lastTrial = Now.NowUtcMs();
+                                    w.lastRecheck = w.lastTrial;
+                                    queue.add(w);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException x) {x.printStackTrace();}
+                }
+            }
+            log.debug("Closing Downlink process thread "+id);
+        }
+    }
+
+
 
 }

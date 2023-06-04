@@ -2,10 +2,12 @@ package com.disk91.forwarder.api;
 
 import com.disk91.forwarder.api.interfaces.ActionResult;
 import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.api.interfaces.HeliumDownlink;
 import com.disk91.forwarder.service.PayloadService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -23,46 +25,33 @@ import javax.servlet.http.HttpServletRequest;
 
 @Tag( name = "capture api", description = "capture message from chripstack" )
 @CrossOrigin
-@RequestMapping(value = "/capture")
+@RequestMapping(value = "/forwarder/1.0/downlink")
 @RestController
-public class CaptureApi {
+public class DownlinkApi {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
     protected PayloadService payloadService;
 
-    @Operation(summary = "Get a message from chirpstack",
-            description = "Get a message from chirpstack",
+    @Operation(summary = "Get a downlink message for chirpstack",
+            description = "Get a downlink message for chirpstack",
             responses = {
                     @ApiResponse(responseCode = "200", description= "Done",
                             content = @Content(array = @ArraySchema(schema = @Schema( implementation = ActionResult.class)))),
-                    @ApiResponse(responseCode = "403", description= "Forbidden", content = @Content(schema = @Schema(implementation = ActionResult.class))),
             }
     )
-    @RequestMapping(value="/",
+    @RequestMapping(value="/{downlinkKey}/",
             produces = MediaType.APPLICATION_JSON_VALUE,
             method= RequestMethod.POST)
-    public ResponseEntity<?> postChirpstackMessage(
+    public ResponseEntity<?> postHeliumDownlink(
             HttpServletRequest request,
-            @RequestBody(required = true)  ChipstackPayload /* String */  message
-    ) {
-/* */
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            log.info("## "+mapper.writeValueAsString(message));
-        } catch (JsonProcessingException e) {
-            log.error(e.getMessage());
-            e.printStackTrace();
-        }
-/* */
+            @Parameter(required = true, name = "downlinkKey", description = "Downlink unique identified")
+            @PathVariable String downlinkKey,
 
-        if ( message.getRxInfo() == null || message.getRxInfo().size() == 0 ) {
-            // join message or error message
-            return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.NO_CONTENT);
-        }
-        payloadService.asyncProcessUplink(request,message);
- //       log.info(message);
+            @RequestBody(required = true) HeliumDownlink downlink
+    ) {
+        payloadService.asyncProcessDownlink(request,downlinkKey,downlink);
         return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
     }
 
