@@ -301,7 +301,10 @@ public class PayloadService {
           hh.setReported_at(DateConverters.StringDateToMs(rx.getTime()));
           hh.setRssi(rx.getRssi());
           hh.setSnr(rx.getSnr());
-          hh.setSpreading("NA");
+
+          int bw = c.getTxInfo().getModulation().getLora().getBandwidth();
+          int sf = c.getTxInfo().getModulation().getLora().getSpreadingFactor();
+          hh.setSpreading("SF"+sf+"BW"+(bw/1000));
           hh.setStatus("success");
           hh.setFrequency(c.getTxInfo().getFrequency()/1_000_000.0);
           hs.add(hh);
