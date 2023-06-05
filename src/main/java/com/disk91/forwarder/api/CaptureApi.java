@@ -1,10 +1,13 @@
 package com.disk91.forwarder.api;
 
+import com.disk91.forwarder.ForwarderConfig;
 import com.disk91.forwarder.api.interfaces.ActionResult;
 import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.service.LoadBalancerService;
 import com.disk91.forwarder.service.PayloadService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.ingeniousthings.tools.Tools;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -33,12 +36,38 @@ public class CaptureApi {
     @Autowired
     protected PayloadService payloadService;
 
+    @Autowired
+    protected ForwarderConfig forwarderConfig;
+
+    @Autowired
+    protected LoadBalancerService loadBalancerService;
+
+    @Operation(summary = "Get the status of the endpoint for load balancing",
+            description = "Get status of th endpoint for load balancing",
+            responses = {
+                    @ApiResponse(responseCode = "200", description= "Service Open", content = @Content(schema = @Schema(implementation = ActionResult.class))),
+                    @ApiResponse(responseCode = "204", description= "Service Closing", content = @Content(schema = @Schema(implementation = ActionResult.class))),
+            }
+    )
+    @RequestMapping(value="/state/",
+            produces = MediaType.APPLICATION_JSON_VALUE,
+            method= RequestMethod.GET)
+    public ResponseEntity<?> getEndpointState(
+            HttpServletRequest request
+    ) {
+        if ( payloadService.isStateClose() ) {
+            return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
+    }
+
+
     @Operation(summary = "Get a message from chirpstack",
             description = "Get a message from chirpstack",
             responses = {
-                    @ApiResponse(responseCode = "200", description= "Done",
-                            content = @Content(array = @ArraySchema(schema = @Schema( implementation = ActionResult.class)))),
-                    @ApiResponse(responseCode = "403", description= "Forbidden", content = @Content(schema = @Schema(implementation = ActionResult.class))),
+                    @ApiResponse(responseCode = "200", description= "Success", content = @Content(schema = @Schema(implementation = ActionResult.class))),
+                    @ApiResponse(responseCode = "204", description= "No Content", content = @Content(schema = @Schema(implementation = ActionResult.class))),
+                    @ApiResponse(responseCode = "503", description= "Not Available", content = @Content(schema = @Schema(implementation = ActionResult.class))),
             }
     )
     @RequestMapping(value="/",
@@ -50,33 +79,38 @@ public class CaptureApi {
             @RequestParam("event") String event,
             @RequestBody(required = true)  ChipstackPayload /* String */  message
     ) {
-/*
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            log.info("## "+mapper.writeValueAsString(message));
-        } catch (JsonProcessingException e) {
-            log.error(e.getMessage());
-            e.printStackTrace();
-        }
- */
 
-        // events :
-        //  - join
-        //  - up => uplink
-        //  - txack => what hotspots acked the tx
-        //  - status => radio quality info
-        //  - ack => confirm downlink ack
-        //  - log => error
-        //  - location => position
-        //  - integration => related to integration
+        if ( forwarderConfig.isForwarderBalancerMode() ) {
 
-        if ( event.compareToIgnoreCase("up") != 0 ) {
-            // join message or error message
-            return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.NO_CONTENT);
+            if ( event.compareToIgnoreCase("up") != 0 ) {
+                if ( loadBalancerService.pushToNode(request,message,event) ) {
+                    return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
+                }
+            } else {
+                return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.NO_CONTENT);
+            }
+            return new ResponseEntity<>(ActionResult.FAILED(), HttpStatus.SERVICE_UNAVAILABLE);
+
+        } else {
+
+            // events :
+            //  - join
+            //  - up => uplink
+            //  - txack => what hotspots acked the tx
+            //  - status => radio quality info
+            //  - ack => confirm downlink ack
+            //  - log => error
+            //  - location => position
+            //  - integration => related to integration
+
+            if ( event.compareToIgnoreCase("up") != 0 ) {
+                // not an uplink message
+                return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.NO_CONTENT);
+            }
+            payloadService.asyncProcessUplink(request,message);
+            return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
         }
-        payloadService.asyncProcessUplink(request,message);
- //       log.info(message);
-        return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
+
     }
 
 

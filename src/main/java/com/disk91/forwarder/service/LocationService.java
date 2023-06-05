@@ -29,21 +29,26 @@ public class LocationService {
     @PostConstruct
     private void initLocationCacheService() {
         log.info("initLocationCacheService initialization");
-        this.positionCache = new ObjectCache<String, HotspotPosition>("PositionCache", 200000, 36*Now.ONE_HOUR) {
-            @Override
-            public void onCacheRemoval(String key, HotspotPosition obj, boolean batch, boolean last) {
-                // nothing to do, readOnly
-            }
 
-            @Override
-            public void bulkCacheUpdate(List<HotspotPosition> objects) {
+        if ( ! forwarderConfig.isForwarderBalancerMode() ) {
+            this.positionCache = new ObjectCache<String, HotspotPosition>("PositionCache", 200000, 36 * Now.ONE_HOUR) {
+                @Override
+                public void onCacheRemoval(String key, HotspotPosition obj, boolean batch, boolean last) {
+                    // nothing to do, readOnly
+                }
 
-            }
-        };
+                @Override
+                public void bulkCacheUpdate(List<HotspotPosition> objects) {
+
+                }
+            };
+        }
     }
 
 
     public HotspotPosition getHotspotPosition(String hotspotId) {
+        if ( forwarderConfig.isForwarderBalancerMode() ) return null;
+
         // try from cache
         HotspotPosition h = this.positionCache.get(hotspotId);
         if ( h != null ) return h;
@@ -93,7 +98,7 @@ public class LocationService {
     /**
      * Get Api Headers
      */
-    protected HttpEntity<String> createHeaders(boolean withAuth){
+    private HttpEntity<String> createHeaders(boolean withAuth){
 
         HttpHeaders headers = new HttpHeaders();
         ArrayList<MediaType> accept = new ArrayList<>();
@@ -113,7 +118,7 @@ public class LocationService {
     }
 
 
-    public HotspotPosition loadHotspotPosition(String hotspotID) throws ITNotFoundException, ITParseException {
+    private HotspotPosition loadHotspotPosition(String hotspotID) throws ITNotFoundException, ITParseException {
 
         RestTemplate restTemplate = new RestTemplate();
         String url="";

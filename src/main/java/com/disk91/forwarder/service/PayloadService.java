@@ -34,10 +34,19 @@ public class PayloadService {
 
     protected boolean uplinkOpen = true;
     protected boolean downlinkOpen = true;
-    boolean asyncUplinkEnable = true;
-    boolean asyncDownlinkEnable = true;
+    protected boolean asyncUplinkEnable = true;
+    protected boolean asyncDownlinkEnable = true;
+
+    protected boolean closeForRequest = false;
+    public boolean isStateClose() { return closeForRequest; }
 
     public void closeService() {
+        if ( forwarderConfig.isForwarderBalancerMode() ) return;
+
+        // stop api input
+        log.info("Prepare Uplink");
+        this.closeForRequest = true;
+        Tools.sleep(10_000);
         // stop reception
         log.info("Closing Uplink");
         this.uplinkOpen = false;
@@ -84,7 +93,9 @@ public class PayloadService {
 
     @PostConstruct
     private void onStart() {
+        if ( forwarderConfig.isForwarderBalancerMode() ) return;
         log.info("Starting PayloadService");
+
         threadRunningUplink = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
         uplinkThreads = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
         for ( int q = 0 ; q < forwarderConfig.getHeliumAsyncProcessor() ; q++) {
@@ -120,7 +131,7 @@ public class PayloadService {
 
 
     public boolean asyncProcessUplink(HttpServletRequest req, ChipstackPayload c) {
-
+        if ( forwarderConfig.isForwarderBalancerMode() ) return false;
         if (!this.uplinkOpen) return false;
 
         DelayedUplink dc = new DelayedUplink();
@@ -248,7 +259,7 @@ public class PayloadService {
 
 
 
-    public HeliumPayload getHeliumPayload(ChipstackPayload c) {
+    protected HeliumPayload getHeliumPayload(ChipstackPayload c) {
         HeliumPayload h = new HeliumPayload();
 
         h.setApp_eui("0000000000000000");
@@ -406,6 +417,7 @@ public class PayloadService {
     private ObjectCache<String, DownlinkSession> downlinkCache;
     @PostConstruct
     private void initDownlinkSessionCache() {
+        if ( forwarderConfig.isForwarderBalancerMode() ) return;
         log.debug("initDownlinkSessionCache initialization");
         this.downlinkCache = new ObjectCache<String, DownlinkSession>("DownlinkCache", 100000, DOWNLINK_EXPIRATION) {
             @Override
@@ -456,6 +468,7 @@ public class PayloadService {
 
     @PostConstruct
     private void onStartDownlink() {
+        if ( forwarderConfig.isForwarderBalancerMode() ) return;
         log.info("Starting DownlinkService");
         asyncDownlink = new ConcurrentLinkedQueue[forwarderConfig.getHeliumAsyncProcessor()];
         downlinkThreadRunning = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
@@ -471,6 +484,7 @@ public class PayloadService {
     }
 
     public synchronized boolean asyncProcessDownlink(HttpServletRequest req, String key, HeliumDownlink d) {
+        if ( forwarderConfig.isForwarderBalancerMode() ) return false;
         if (!this.downlinkOpen) return false;
 
         // search for the downlink session

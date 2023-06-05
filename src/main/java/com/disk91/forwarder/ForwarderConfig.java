@@ -142,4 +142,29 @@ public class ForwarderConfig {
     public String getChirpstackApiAdminKey() {
         return chirpstackApiAdminKey;
     }
+
+    // ==============================
+    // Balancer mode
+    // ==============================
+
+    @Value ("${forwarder.balancer.mode}")
+    private boolean forwarderBalancerMode;
+
+    @Value ("${forwarder.balancer.node1.endpoint}")
+    private String forwarderBalancerNode1Enpoint;
+
+    @Value ("${forwarder.balancer.node2.endpoint}")
+    private String forwarderBalancerNode2Enpoint;
+
+    public boolean isForwarderBalancerMode() {
+        return forwarderBalancerMode;
+    }
+
+    public String getForwarderBalancerNode1Enpoint() {
+        return forwarderBalancerNode1Enpoint;
+    }
+
+    public String getForwarderBalancerNode2Enpoint() {
+        return forwarderBalancerNode2Enpoint;
+    }
 }
