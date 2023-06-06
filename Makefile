@@ -5,10 +5,10 @@ CONSOLE_DIR=/helium
 .FORCE:
 
 init: .FORCE
-	./gradlew build -x test && docker build -t disk91/console:1.0.0 .
+	./gradlew build -x test && docker build -t disk91/forwarder:1.0.0 .
 
 back: .FORCE
-	./gradlew build -x test && docker build -t disk91/console:2.0.0 .
+	./gradlew build -x test && docker build -t disk91/forwarder:2.0.0 .
 
 build: back
 
