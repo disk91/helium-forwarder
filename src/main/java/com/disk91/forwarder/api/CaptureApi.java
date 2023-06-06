@@ -109,6 +109,7 @@ public class CaptureApi {
             }
             payloadService.asyncProcessUplink(request,message);
             return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
+
         }
 
     }

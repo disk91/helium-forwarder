@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Enumeration;
 
 @Service
 public class LoadBalancerService {
@@ -88,16 +89,12 @@ public class LoadBalancerService {
         if ( q == 0 ) {
             if ( this.getNode1State() ) {
                 // push node 1
-                if ( ) {
-
-
+                if ( transferPayload(forwarderConfig.getForwarderBalancerNode1Enpoint(),req,body,event) ) {
                     return true;
                 }
             } else  if ( this.getNode2State() ) {
                 // push node 2
-                if ( ) {
-
-
+                if ( transferPayload(forwarderConfig.getForwarderBalancerNode2Enpoint(),req,body,event) ) {
                     return true;
                 }
             } else {
@@ -106,22 +103,62 @@ public class LoadBalancerService {
         } else {
             if ( this.getNode2State() ) {
                 // push node 2
-                if ( ) {
-
-
+                if ( transferPayload(forwarderConfig.getForwarderBalancerNode2Enpoint(),req,body,event) ) {
                     return true;
                 }
             } else  if ( this.getNode1State() ) {
                 // push node 1
-                if ( ) {
-
-
+                if ( transferPayload(forwarderConfig.getForwarderBalancerNode1Enpoint(),req,body,event) ) {
                     return true;
                 }
             } else {
                 return false;
             }
         }
+        return false;
     }
+
+    protected boolean transferPayload(String endpoint, HttpServletRequest req, ChipstackPayload body, String event ) {
+
+        RestTemplate restTemplate = new RestTemplate();
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            Enumeration<String> ss = req.getHeaderNames();
+            while (ss.hasMoreElements()) {
+                String s = ss.nextElement();
+                if (    s.compareToIgnoreCase(HttpHeaders.USER_AGENT) != 0
+                    &&  s.compareToIgnoreCase(HttpHeaders.CONTENT_TYPE) != 0
+                ) {
+                    headers.add(s, req.getHeader(s));
+                }
+            }
+            headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
+            headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
+
+            HttpEntity he = new HttpEntity(body,headers);
+            String url=endpoint+"/capture/?event"+event;
+            ResponseEntity<String> responseEntity =
+                    restTemplate.exchange(
+                            url,
+                            HttpMethod.POST,
+                            he,
+                            String.class
+                    );
+            if ( responseEntity.getStatusCode() == HttpStatus.OK ) {
+                return true;
+            } else if ( responseEntity.getStatusCode() == HttpStatus.NO_CONTENT ) {
+                return true;
+            }
+            return false;
+        } catch (HttpClientErrorException e) {
+            return false;
+        } catch (HttpServerErrorException e) {
+            return false;
+        } catch (Exception x ) {
+            return false;
+        }
+
+    }
+
 
 }

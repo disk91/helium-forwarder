@@ -259,7 +259,7 @@ public class PayloadService {
 
 
 
-    protected HeliumPayload getHeliumPayload(ChipstackPayload c) {
+    public HeliumPayload getHeliumPayload(ChipstackPayload c) {
         HeliumPayload h = new HeliumPayload();
 
         h.setApp_eui("0000000000000000");
@@ -336,6 +336,24 @@ public class PayloadService {
 
         return h;
     }
+
+    public ChipstackPayload enrichPayload( ChipstackPayload c ) {
+
+        if ( c.getRxInfo() != null ) {
+
+            for ( ChirpstackRxInfo rx :c.getRxInfo() ) {
+                if ( rx.getMetadata() != null ) {
+                    HotspotPosition p = locationService.getHotspotPosition(rx.getMetadata().getGateway_id());
+                    rx.getMetadata().setLon(p.getPosition().getLng());
+                    rx.getMetadata().setLat(p.getPosition().getLat());
+                }
+            }
+
+        }
+
+        return c;
+    }
+
 
     // ----------------------------------
     // Process HTTP

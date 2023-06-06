@@ -64,8 +64,7 @@ public class WebSecurityProfile {
                         // user management
                         .antMatchers("/forwarder/1.0/sign/**").permitAll()
                         // capture endpoint
-                        .antMatchers("/capture/").permitAll()
-                        .antMatchers("/capture/state/").permitAll()
+                        .antMatchers("/capture/**").permitAll()
                         .antMatchers("/forwarder/1.0/downlink/**").permitAll()
                         // public messages
                         // swagger documentation

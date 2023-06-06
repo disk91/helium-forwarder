@@ -19,6 +19,9 @@ public class ChirpstackMetadata {
     private String region_common_name;
     private String region_name;
 
+    private double lat = 0.0;
+    private double lon = 0.0;
+
     // ---
 
     public String getRegion_common_name() {
@@ -51,5 +54,21 @@ public class ChirpstackMetadata {
 
     public void setGateway_name(String gateway_name) {
         this.gateway_name = gateway_name;
+    }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public void setLat(double lat) {
+        this.lat = lat;
+    }
+
+    public double getLon() {
+        return lon;
+    }
+
+    public void setLon(double lon) {
+        this.lon = lon;
     }
 }
