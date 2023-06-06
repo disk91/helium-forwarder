@@ -32,6 +32,8 @@ public class LoadBalancerService {
     @Scheduled(fixedRateString = "${balancing.check.rate}", initialDelay = 1_000)
     protected void backgroundLogStatsUpdate() {
 
+        if ( ! forwarderConfig.isForwarderBalancerMode() ) return;
+        
         // Test the nodes state
         node1State = isNodeActive(forwarderConfig.getForwarderBalancerNode1Enpoint());
         node2State = isNodeActive(forwarderConfig.getForwarderBalancerNode2Enpoint());
