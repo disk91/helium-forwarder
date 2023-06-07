@@ -10,7 +10,7 @@ balancer: .FORCE
 nodes: .FORCE
 	./gradlew build -x test && docker build -t disk91/forwarder:2.0.0 .
 
-init: balancer
+init: nodes balancer
 
 build: nodes
 
