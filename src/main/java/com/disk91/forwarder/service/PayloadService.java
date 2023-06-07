@@ -44,7 +44,7 @@ public class PayloadService {
         if ( forwarderConfig.isForwarderBalancerMode() ) return;
 
         // stop api input
-        log.info("Prepare Uplink");
+        log.info("Close Uplink request");
         this.closeForRequest = true;
         Tools.sleep(10_000);
         // stop reception

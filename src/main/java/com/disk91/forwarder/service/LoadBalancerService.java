@@ -138,7 +138,7 @@ public class LoadBalancerService {
             headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
 
             HttpEntity he = new HttpEntity(body,headers);
-            String url=endpoint+"/capture/?event"+event;
+            String url=endpoint+"/capture/?event="+event;
             ResponseEntity<String> responseEntity =
                     restTemplate.exchange(
                             url,

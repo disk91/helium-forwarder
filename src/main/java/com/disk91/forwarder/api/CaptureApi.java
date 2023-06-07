@@ -83,7 +83,7 @@ public class CaptureApi {
         log.debug("Frame received");
         if ( forwarderConfig.isForwarderBalancerMode() ) {
 
-            if ( event.compareToIgnoreCase("up") != 0 ) {
+            if ( event.compareToIgnoreCase("up") == 0 ) {
                 if ( loadBalancerService.pushToNode(request,message,event) ) {
                     return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
                 }

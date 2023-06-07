@@ -4,13 +4,23 @@ CONSOLE_DIR=/helium
 
 .FORCE:
 
-init: .FORCE
+balancer: .FORCE
 	./gradlew build -x test && docker build -t disk91/forwarder:1.0.0 .
 
-back: .FORCE
+nodes: .FORCE
 	./gradlew build -x test && docker build -t disk91/forwarder:2.0.0 .
 
-build: back
+init: balancer
 
+build: nodes
 
+update-nodes: nodes
+	cd $(CONSOLE_DIR) ; docker compose stop fwnode1
+	cd $(CONSOLE_DIR) ; docker compose up -d fwnode1
+	sleep 10
+	cd $(CONSOLE_DIR) ; docker compose stop fwnode2
+	cd $(CONSOLE_DIR) ; docker compose up -d fwnode2
+
+update-balancer: balancer
+	cd $(CONSOLE_DIR) ; docker compose up -d fwdlb
 
