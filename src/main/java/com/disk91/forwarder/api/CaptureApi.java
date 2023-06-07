@@ -80,6 +80,7 @@ public class CaptureApi {
             @RequestBody(required = true)  ChipstackPayload /* String */  message
     ) {
 
+        log.debug("Frame received");
         if ( forwarderConfig.isForwarderBalancerMode() ) {
 
             if ( event.compareToIgnoreCase("up") != 0 ) {

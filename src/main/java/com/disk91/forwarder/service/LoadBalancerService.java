@@ -33,7 +33,7 @@ public class LoadBalancerService {
     protected void backgroundLogStatsUpdate() {
 
         if ( ! forwarderConfig.isForwarderBalancerMode() ) return;
-        
+
         // Test the nodes state
         node1State = isNodeActive(forwarderConfig.getForwarderBalancerNode1Enpoint());
         node2State = isNodeActive(forwarderConfig.getForwarderBalancerNode2Enpoint());
@@ -147,6 +147,7 @@ public class LoadBalancerService {
                             String.class
                     );
             if ( responseEntity.getStatusCode() == HttpStatus.OK ) {
+                log.debug("Frame transferred to "+endpoint);
                 return true;
             } else if ( responseEntity.getStatusCode() == HttpStatus.NO_CONTENT ) {
                 return true;
