@@ -28,7 +28,10 @@ public class KeyValue {
     }
 
     public String getOneKey(String key) {
-        return this.entry.get(key).toString();
+        if ( this.entry.get(key) != null ) {
+            return this.entry.get(key).toString();
+        }
+        return null;
     }
 
     @Override

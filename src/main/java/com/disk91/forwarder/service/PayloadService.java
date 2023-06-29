@@ -205,52 +205,60 @@ public class PayloadService {
             log.debug("Starting Payload process thread "+id);
             DelayedUplink w;
             while ( (w = queue.poll()) != null || asyncUplinkEnable ) {
-                if ( w != null) {
-                    // retrial limited to 3 attempt and every 10 seconds
-                    long now = Now.NowUtcMs();
-                    if ( w.retry > 0 && ((now - w.lastTrial) < 10_000 ) ) {
-                        if ( (now - w.lastRecheck) < 500 ) {
-                            // recheck too fast
+                try {
+                    if (w != null) {
+                        // retrial limited to 3 attempt and every 10 seconds
+                        long now = Now.NowUtcMs();
+                        if (w.retry > 0 && ((now - w.lastTrial) < 10_000)) {
+                            if ((now - w.lastRecheck) < 500) {
+                                // recheck too fast
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException x) {
+                                }
+                            }
+                            w.lastRecheck = now;
+                            queue.add(w);
+                        } else {
+                            log.debug("Find one in uplink queue");
+                            prometeusService.remUplinkInQueue();
+                            w.helium = getHeliumPayload(w.chirpstack);
+
+                            // trace
                             try {
-                                Thread.sleep(100);
-                            } catch ( InterruptedException x) {}
-                        }
-                        w.lastRecheck = now;
-                        queue.add(w);
-                    } else {
-                        log.debug("Find one in uplink queue");
-                        prometeusService.remUplinkInQueue();
-                        w.helium = getHeliumPayload(w.chirpstack);
+                                ObjectMapper mapper = new ObjectMapper();
+                                log.debug(">> " + mapper.writeValueAsString(w.helium));
+                            } catch (JsonProcessingException e) {
+                                log.error(e.getMessage());
+                                e.printStackTrace();
+                            }
 
-                        // trace
-                        try {
-                            ObjectMapper mapper = new ObjectMapper();
-                            log.debug(">> "+mapper.writeValueAsString(w.helium));
-                        } catch (JsonProcessingException e) {
-                            log.error(e.getMessage());
-                            e.printStackTrace();
-                        }
-
-                        // apply integration
-                        if (w.type == INTEGRATION_TYPE.HTTP) {
-                            if (!processHttp(w)) {
-                                w.retry++;
-                                if (w.retry < 3) {
-                                    prometeusService.addUplinkRetry();
-                                    prometeusService.addUplinkInQueue();
-                                    w.lastTrial = Now.NowUtcMs();
-                                    w.lastRecheck = w.lastTrial;
-                                    queue.add(w);
-                                } else {
-                                    prometeusService.addUplinkFailure();
+                            // apply integration
+                            if (w.type == INTEGRATION_TYPE.HTTP) {
+                                if (!processHttp(w)) {
+                                    w.retry++;
+                                    if (w.retry < 3) {
+                                        prometeusService.addUplinkRetry();
+                                        prometeusService.addUplinkInQueue();
+                                        w.lastTrial = Now.NowUtcMs();
+                                        w.lastRecheck = w.lastTrial;
+                                        queue.add(w);
+                                    } else {
+                                        prometeusService.addUplinkFailure();
+                                    }
                                 }
                             }
                         }
+                    } else {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException x) {
+                            x.printStackTrace();
+                        }
                     }
-                } else {
-                    try {
-                        Thread.sleep(10);
-                    } catch (InterruptedException x) {x.printStackTrace();}
+                } catch (Exception x) {
+                    log.error("Exception in processing frame "+x.getMessage());
+                    x.printStackTrace();
                 }
             }
             log.debug("Closing Payload process thread "+id);
