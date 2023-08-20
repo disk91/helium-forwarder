@@ -228,6 +228,10 @@ public class PayloadService {
                         } else {
                             log.debug("Find one in uplink queue");
                             prometeusService.remUplinkInQueue();
+
+                            ObjectMapper map = new ObjectMapper();
+                            log.info(map.writeValueAsString(w.chirpstack));
+
                             w.helium = getHeliumPayload(w.chirpstack);
 
                             // trace
