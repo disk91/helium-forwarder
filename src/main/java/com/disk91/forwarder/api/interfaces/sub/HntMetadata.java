@@ -39,6 +39,10 @@ public class HntMetadata {
                   "organization_id":"f9cf36ec-ae8a-4546-a539-fb7a6b88ebd9"
                }],
             "organization_id":"f9cf36ec-ae8a-4546-a539-fb7a6b88ebd9"
+            *"multi_buy": 1,
+            *"rx_delay": 1,
+            *"rx_delay_actual": 1,
+            *"rx_delay_state": "rx_delay_established"
         },
      */
 
@@ -47,6 +51,19 @@ public class HntMetadata {
 
     @Schema(description = "Organization Id", required = false)
     protected String organization_id;
+
+    @Schema(description = "Multi buy configuration", required = false)
+    protected int multi_buy;
+
+    @Schema(description = "Rx Delay", required = false)
+    protected int rx_delay;
+
+    @Schema(description = "Rx Delay currently negociated with device", required = false)
+    protected int rx_delay_actual;
+
+    @Schema(description = "Status of rx delay negotiation with device", required = false)
+    protected String rx_delay_state;
+
 
     // ---
 
@@ -64,5 +81,37 @@ public class HntMetadata {
 
     public void setOrganization_id(String organization_id) {
         this.organization_id = organization_id;
+    }
+
+    public int getMulti_buy() {
+        return multi_buy;
+    }
+
+    public void setMulti_buy(int multi_buy) {
+        this.multi_buy = multi_buy;
+    }
+
+    public int getRx_delay() {
+        return rx_delay;
+    }
+
+    public void setRx_delay(int rx_delay) {
+        this.rx_delay = rx_delay;
+    }
+
+    public int getRx_delay_actual() {
+        return rx_delay_actual;
+    }
+
+    public void setRx_delay_actual(int rx_delay_actual) {
+        this.rx_delay_actual = rx_delay_actual;
+    }
+
+    public String getRx_delay_state() {
+        return rx_delay_state;
+    }
+
+    public void setRx_delay_state(String rx_delay_state) {
+        this.rx_delay_state = rx_delay_state;
     }
 }

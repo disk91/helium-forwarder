@@ -5,6 +5,7 @@ import com.disk91.forwarder.api.interfaces.ChipstackPayload;
 import com.disk91.forwarder.api.interfaces.HeliumDownlink;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.api.interfaces.sub.*;
+import com.disk91.forwarder.mqtt.MqttManager;
 import com.disk91.forwarder.service.itf.ChirpstackEnqueue;
 import com.disk91.forwarder.service.itf.HotspotPosition;
 import com.disk91.forwarder.service.itf.sub.QueueItem;
@@ -117,7 +118,9 @@ public class PayloadService {
         public INTEGRATION_TYPE type = INTEGRATION_TYPE.UNKNOWN;
         public INTEGRATION_VERB verb = INTEGRATION_VERB.UNKNOWN;
         public String endpoint;
-        public String topic;
+        public String topicUp;
+
+        public String topicDown;
         public String urlparam;
         public KeyValue headers= new KeyValue();
         public ChipstackPayload chirpstack;
@@ -175,11 +178,14 @@ public class PayloadService {
         }
         if ( type.compareToIgnoreCase("mqtt") == 0 ) {
             dc.type = INTEGRATION_TYPE.MQTT;
-            dc.topic = req.getHeader("huptopic");
+            dc.topicUp = req.getHeader("huptopic");
+            dc.topicDown = req.getHeader("hdntopic");
+
             dc.endpoint = req.getHeader("hendpoint");
             if ( dc.endpoint.length() < 5 ) return false;
             if ( ! dc.endpoint.startsWith("mqtt") ) return false;
-            if ( dc.topic.length() < 2 ) return false;
+            if ( dc.topicUp.length() < 3 ) return false;
+            if ( dc.topicDown.length() > 0 && dc.topicDown.length() < 3 ) return false;
         }
         // type.compareToIgnoreCase("google_sheets") == 0
         log.debug("Add Frame in queue");
@@ -236,6 +242,19 @@ public class PayloadService {
                             // apply integration
                             if (w.type == INTEGRATION_TYPE.HTTP) {
                                 if (!processHttp(w)) {
+                                    w.retry++;
+                                    if (w.retry < 3) {
+                                        prometeusService.addUplinkRetry();
+                                        prometeusService.addUplinkInQueue();
+                                        w.lastTrial = Now.NowUtcMs();
+                                        w.lastRecheck = w.lastTrial;
+                                        queue.add(w);
+                                    } else {
+                                        prometeusService.addUplinkFailure();
+                                    }
+                                }
+                            } else if ( w.type == INTEGRATION_TYPE.MQTT ) {
+                                if (!processMqtt(w)) {
                                     w.retry++;
                                     if (w.retry < 3) {
                                         prometeusService.addUplinkRetry();
@@ -360,6 +379,27 @@ public class PayloadService {
         }
 
         return c;
+    }
+
+    // ----------------------------------
+    // Process MQTT
+    // ----------------------------------
+    @Autowired
+    protected MqttConnectionService mqttConnectionService;
+
+    protected boolean processMqtt(
+        DelayedUplink o
+    ) {
+        MqttManager m = mqttConnectionService.getMqttManager(
+            o.endpoint,
+            null,
+            o.topicUp,
+            o.topicDown
+        );
+        if ( m != null ) {
+            return m.publishMessage(o.helium);
+        }
+        return false;
     }
 
 

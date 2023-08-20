@@ -52,10 +52,19 @@ public class HeliumPayload {
                  "name":"foxtrackr",
                   "organization_id":"f9cf36ec-ae8a-4546-a539-fb7a6b88ebd9"
                }],
-            "organization_id":"f9cf36ec-ae8a-4546-a539-fb7a6b88ebd9"
+            "organization_id":"f9cf36ec-ae8a-4546-a539-fb7a6b88ebd9",
+            *"multi_buy": 1,
+            *"rx_delay": 1,
+            *"rx_delay_actual": 1,
+            *"rx_delay_state": "rx_delay_established"
         },
         "name":"Test",
         "payload":"SGVsbG8gT1RBQSE=",
+        *"payload_size": 8,
+        *"raw_packet": "QFoDAEgANJQB5aiHlBsc22jPaZHj",
+        *"replay": false,
+        *"type": "uplink",
+        *"uuid": "a1fc3a64-36e7-4971-9301-80000216d5ab"
         "port":1,
         "reported_at":1604750469
       }
