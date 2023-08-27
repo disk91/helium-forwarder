@@ -20,6 +20,9 @@
 
 package fr.ingeniousthings.tools;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class Stuff {
 
     public static int hexCharToInt(char c) {
@@ -94,5 +97,11 @@ public class Stuff {
 
     public static int getIntFromByte(byte src) {
         return (int)src & 0xFF;
+    }
+
+    public static boolean isAnHexString(String s) {
+        Pattern pattern = Pattern.compile("^[0-9A-Fa-f]+$");
+        Matcher matcher = pattern.matcher(s);
+        return matcher.matches();
     }
 }

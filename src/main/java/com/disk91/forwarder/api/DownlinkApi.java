@@ -3,6 +3,7 @@ package com.disk91.forwarder.api;
 import com.disk91.forwarder.api.interfaces.ActionResult;
 import com.disk91.forwarder.api.interfaces.ChipstackPayload;
 import com.disk91.forwarder.api.interfaces.HeliumDownlink;
+import com.disk91.forwarder.service.DownlinkService;
 import com.disk91.forwarder.service.PayloadService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +35,9 @@ public class DownlinkApi {
     @Autowired
     protected PayloadService payloadService;
 
+    @Autowired
+    protected DownlinkService downlinkService;
+
     @Operation(summary = "Get a downlink message for chirpstack",
             description = "Get a downlink message for chirpstack",
             responses = {
@@ -51,7 +55,7 @@ public class DownlinkApi {
 
             @RequestBody(required = true) HeliumDownlink downlink
     ) {
-        payloadService.asyncProcessDownlink(request,downlinkKey,downlink);
+        downlinkService.asyncProcessDownlink(request,downlinkKey,downlink);
         return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
     }
 

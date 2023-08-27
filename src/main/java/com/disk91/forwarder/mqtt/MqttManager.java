@@ -1,14 +1,16 @@
 package com.disk91.forwarder.mqtt;
 
+import com.disk91.forwarder.api.interfaces.HeliumMqttDownlinkPayload;
 import com.disk91.forwarder.api.interfaces.HeliumMqttPayload;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
+import com.disk91.forwarder.service.DownlinkService;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import fr.ingeniousthings.tools.DateConverters;
-import fr.ingeniousthings.tools.Now;
-import fr.ingeniousthings.tools.RandomString;
+import fr.ingeniousthings.tools.*;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.postgresql.shaded.com.ongres.scram.common.bouncycastle.base64.Base64;
@@ -16,6 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.print.attribute.standard.DialogOwner;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +40,8 @@ public class MqttManager implements MqttCallback {
     private String downTopic;
     private String subscribeTopic;
 
+    private HashMap<String,String> deviceEuis;
+    private int downlinkDevIdField;
     private boolean initSuccess = false;
 
     /*
@@ -55,6 +61,8 @@ public class MqttManager implements MqttCallback {
         String _user="";
         String _password="";
         String _server="";
+        this.downlinkDevIdField = -1;
+        this.deviceEuis=new HashMap<>();
         try {
             if (_endpoint.toLowerCase().startsWith("mqtts://")) {
                 _scheme = "ssl://";
@@ -104,15 +112,37 @@ public class MqttManager implements MqttCallback {
         this.url = _scheme+_server+":"+_port;
         this.upTopic = _upTopic;
         this.downTopic = _downTopic;
+
         if (this.downTopic != null && this.downTopic.length() > 0 ) {
-            this.subscribeTopic = _downTopic.replace("{{device_id}}", "+")
-                .replace("{{device_name}}", "+")
-                .replace("{{device_eui}}", "+")
-                .replace("{{app_eui}}", "+")
-                .replace("{{organization_id}}", "+");
-            // in case we had multiple "+" after this processing
-            this.subscribeTopic = this.subscribeTopic.replaceAll("/.*[+].*[+].*/", "/+/");
-            log.info("Downtopic: " + _downTopic + " Subscription topic: " + this.subscribeTopic);
+            // if we don't have {{device_id}} in the
+            boolean haveDeviceId = _downTopic.contains("/{{device_id}}/")
+                || _downTopic.startsWith("{{device_id}}/")
+                || _downTopic.endsWith("/{{device_id}}");
+
+            // get the downlink deviceId field for later fast extraction
+            String []  fields = _downTopic.split("/");
+            for ( int i = 0 ; i < fields.length ; i++ ) {
+                if ( fields[i].compareToIgnoreCase("{{device_id}}") == 0 ) {
+                    this.downlinkDevIdField = i;
+                }
+            }
+            if ( this.downlinkDevIdField == -1 ) {
+                log.warn("This is a strange situation "+_downTopic);
+                haveDeviceId = false;
+            }
+
+            if ( haveDeviceId ) {
+                this.subscribeTopic = _downTopic.replace("{{device_id}}", "+")
+                    .replace("{{device_name}}", "+")
+                    .replace("{{device_eui}}", "+")
+                    .replace("{{app_eui}}", "+")
+                    .replace("{{organization_id}}", "+");
+                // in case we had multiple "+" after this processing
+                this.subscribeTopic = this.subscribeTopic.replaceAll("/.*[+].*[+].*/", "/+/");
+                log.info("Downtopic: " + _downTopic + " Subscription topic: " + this.subscribeTopic);
+            } else {
+                log.info("We have a Mqtt setup without a supported path for "+this.url+" ("+_downTopic+")");
+            }
         } else this.subscribeTopic = null;
 
         this.persistence = new MemoryPersistence();
@@ -156,10 +186,14 @@ public class MqttManager implements MqttCallback {
 
     public boolean publishMessage( HeliumPayload message ) {
         try {
+            // Add the deveui if not yet know in list for downlink control
+            this.deviceEuis.computeIfAbsent(message.getDev_eui().toLowerCase(), k -> message.getDev_eui().toLowerCase());
+
+            // Compose uplink topic
             String _upTopic = upTopic.replace("{{device_id}}", message.getDev_eui() )
                 .replace("{{device_name}}", message.getName() )
                 .replace("{{device_eui}}", message.getDev_eui() )
-                .replace( "{{app_eui}}", message.getApp_eui() )
+                .replace("{{app_eui}}", message.getApp_eui() )
                 .replace("{{organization_id}}", message.getMetadata().getOrganization_id() );
 
             log.info("Publish on topic ("+_upTopic+") from ("+upTopic+")");
@@ -201,26 +235,45 @@ public class MqttManager implements MqttCallback {
 
     }
 
+    @Autowired
+    protected DownlinkService downlinkService;
+
     @Override
     public void messageArrived(String topicName, MqttMessage message) throws Exception {
         // Leave it blank for Publisher
         long start = Now.NowUtcMs();
-        //log.info("MQTT - MessageArrived on "+topicName);
-        /*
+        log.info("MQTT - MessageArrived on "+topicName);
+
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         mapper.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
-        */
 
-        // some of the messages are protobuf format
-        /*
-        if ( topicName.matches("application/.* /event/up$") ) {
-        */
-            // Prefer M
+        // Device Id comes from the topic, looks like a mess
+        String [] topics = topicName.split("/");
+        if ( topics.length > this.downlinkDevIdField ) {
+            String deviceEui = topics[this.downlinkDevIdField];
+            if ( Stuff.isAnHexString(deviceEui) ) {
+                // verify the device Id is authorized
+                if ( this.deviceEuis.get(deviceEui.toLowerCase()) != null ) {
+
+                    // process the payload
+                    try {
+                        HeliumMqttDownlinkPayload hmm = mapper.readValue(message.toString(), HeliumMqttDownlinkPayload.class);
+                        downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
+                    } catch (JsonProcessingException x) {
+                        log.warn("Impossible to extract downlink payload from " + this.downTopic + "(" + this.url + ") skipping");
+                    }
+
+                } else {
+                    // can be normal due to load balancing
+                    // @TODO when balanced, we could process it twice potentially
+                    // but a such case usually happen before a restart cleaning the cache
+                    log.debug("Downlink from a device currently unknown");
+                }
+            }
+        }
     }
-
-
 
 
 }
