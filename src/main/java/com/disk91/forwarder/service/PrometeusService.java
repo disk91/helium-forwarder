@@ -66,6 +66,17 @@ public class PrometeusService {
         totalDownlinkFailure++;
     }
 
+    private long apiHeliumTimeMs = 0;       // time specific for the Helium API calls -OK
+    private long apiHeliumTotal = 0;        // number of Helium Api calls - OK
+    private long apiHeliumErrors = 0;       // number of failure on Helium Api - OK
+
+    synchronized public void addHeliumApiTotalTimeMs(long startMs) {
+        this.apiHeliumTimeMs += Now.NowUtcMs() - startMs;
+        this.apiHeliumTotal++;
+    }
+    synchronized public void addHeliumTotalError() { this.apiHeliumErrors++; }
+
+
     // =============================================================
     // Prometheus interface
 
@@ -96,6 +107,17 @@ public class PrometeusService {
         return () -> totalDownlinkFailure;
     }
 
+    protected Supplier<Number> getHeliumApiTotalTimeMs() {
+        return ()->apiHeliumTimeMs;
+    }
+
+    protected Supplier<Number> getHeliumApiTotal() {
+        return ()->apiHeliumTotal;
+    }
+
+    protected Supplier<Number> getHeliumApiTotalError() {
+        return ()->apiHeliumErrors;
+    }
 
     public PrometeusService(MeterRegistry registry) {
 
@@ -120,6 +142,15 @@ public class PrometeusService {
         Gauge.builder("fwder.downlink.failure.total", getTotalDownlinkFailure())
                 .description("Total number of downlink failure")
                 .register(registry);
+        Gauge.builder("fwder.nova.total_time_ms", getHeliumApiTotalTimeMs())
+            .description("total time in Nova API")
+            .register(registry);
+        Gauge.builder("fwder.nova.total", getHeliumApiTotal())
+            .description("number of Nova API calls")
+            .register(registry);
+        Gauge.builder("fwder.nova.total_errors", getHeliumApiTotalError())
+            .description("number of Nova API Failure")
+            .register(registry);
 
     }
 

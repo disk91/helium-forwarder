@@ -167,4 +167,67 @@ public class ForwarderConfig {
     public String getForwarderBalancerNode2Enpoint() {
         return forwarderBalancerNode2Enpoint;
     }
+
+    // =============================
+    // GPRC
+    // =============================
+
+    @Value ("${helium.grpc.enable:false}")
+    private boolean heliumGrpcEnable;
+
+    @Value ("${helium.grpc.private.keyfile.path:}")
+    private String heliumGrpcPrivateKeyfilePath;
+
+    @Value ("${helium.grpc.public.key:}")
+    private String heliumGprcPublicKey;
+
+    @Value ("${helium.gprc.server:}")
+    private String heliumGrpcServerExternal;
+
+    @Value ("${helium.gprc.server.default}")
+    private String heliumGrpcServerDefault;
+
+    @Value ("${helium.grpc.port:}")
+    private String heliumGrpcPortExternal;
+
+    @Value ("${helium.grpc.port.default}")
+    private String heliumGrpcPortDefault;
+
+    public boolean isHeliumGrpcEnable() {
+        return heliumGrpcEnable;
+    }
+
+    public String getHeliumGrpcServerExternal() {
+        return heliumGrpcServerExternal;
+    }
+
+    public String getHeliumGrpcServerDefault() {
+        return heliumGrpcServerDefault;
+    }
+
+    public String getHeliumGrpcPortExternal() {
+        return heliumGrpcPortExternal;
+    }
+
+    public String getHeliumGrpcPortDefault() {
+        return heliumGrpcPortDefault;
+    }
+
+    public String getHeliumGrpcPrivateKeyfilePath() {
+        return heliumGrpcPrivateKeyfilePath;
+    }
+    public String getHeliumGprcPublicKey() {
+        return heliumGprcPublicKey;
+    }
+    public String getHeliumGrpcServer() {
+        if (this.getHeliumGrpcServerExternal().length() > 0) return this.getHeliumGrpcServerExternal();
+        return this.getHeliumGrpcServerDefault();
+    }
+
+    public int getHeliumGrpcPort() {
+        if (this.getHeliumGrpcPortExternal().length() > 0) return Integer.parseInt(this.getHeliumGrpcPortExternal());
+        return Integer.parseInt(this.getHeliumGrpcPortDefault());
+    }
+
+
 }

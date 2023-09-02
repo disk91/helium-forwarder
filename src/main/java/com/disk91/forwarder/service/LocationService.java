@@ -45,6 +45,8 @@ public class LocationService {
         }
     }
 
+    @Autowired
+    protected NovaService novaService;
 
     public HotspotPosition getHotspotPosition(String hotspotId) {
         if ( forwarderConfig.isForwarderBalancerMode() ) return null;
@@ -53,18 +55,44 @@ public class LocationService {
         HotspotPosition h = this.positionCache.get(hotspotId);
         if ( h != null ) return h;
 
-        // get from API
-        try {
-            h = loadHotspotPosition(hotspotId);
-            this.positionCache.put(h,hotspotId);
-        } catch (ITNotFoundException x) {
-            h = getEmptyPosition();
-            h.setHotspotId(hotspotId);
-            return h;
-        } catch (ITParseException x) {
-            h = getEmptyPosition();
-            h.setHotspotId(hotspotId);
-            return h;
+        // get from Nova GRPC
+        if ( forwarderConfig.isHeliumGrpcEnable() ) {
+
+            com.uber.h3core.util.LatLng pos = novaService.grpcGetGatewayLocation(hotspotId);
+            if ( pos != null ) {
+                h = new HotspotPosition();
+                h.setHotspotId(hotspotId);
+                LatLng _p = new LatLng();
+                _p.setLat(pos.lat);
+                _p.setLng(pos.lng);
+                _p.setAlt(0);
+                _p.setCity("");
+                _p.setCountry("");
+                _p.setGain(0.0);
+                _p.setLastDatePosition(Now.NowUtcMs());
+                h.setPosition(_p);
+                h.setAnimalName(Animal.getAnimalName(hotspotId,'-'));
+                return h;
+            } else {
+                h = getEmptyPosition();
+                h.setHotspotId(hotspotId);
+                return h;
+            }
+
+        } else {
+            // get from API
+            try {
+                h = loadHotspotPosition(hotspotId);
+                this.positionCache.put(h, hotspotId);
+            } catch (ITNotFoundException x) {
+                h = getEmptyPosition();
+                h.setHotspotId(hotspotId);
+                return h;
+            } catch (ITParseException x) {
+                h = getEmptyPosition();
+                h.setHotspotId(hotspotId);
+                return h;
+            }
         }
         return h;
     }
