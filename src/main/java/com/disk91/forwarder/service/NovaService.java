@@ -168,7 +168,7 @@ public class NovaService {
                 .build());
             log.debug("GPRC get location duration " + (Now.NowUtcMs() - start) + "ms");
 
-            LatLng pos = h3.cellToLatLng(Long.parseLong(response.getLocation()));
+            LatLng pos = h3.cellToLatLng(response.getLocation());
             if (pos != null && Gps.isAValidCoordinate(pos.lat, pos.lng) ) {
                 log.debug("GRPC location is (" + pos.lat + ", "+pos.lng+")");
                 return pos;
