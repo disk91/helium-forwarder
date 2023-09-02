@@ -51,7 +51,7 @@ public class NovaService {
         // like for testing the migrations of devices.
         if ( ! forwarderConfig.isHeliumGrpcEnable() ) {
             log.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            log.warn("Nova GRPC service is disabled, no route will be created");
+            log.warn("Nova GRPC service is disabled, no location will be get that way");
             log.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
             this.grpcInitOk=false;
             return;
@@ -153,7 +153,7 @@ public class NovaService {
 
             long now = Now.NowUtcMs();
             gateway_location_req_v1 requestToSign = gateway_location_req_v1.newBuilder()
-                .setGateway(ByteString.copyFrom(gatewayId.getBytes()))
+                .setGateway(ByteString.copyFrom(HeliumHelper.nameToPubAddress(gatewayId)))
                 .setSigner(this.owner)
                 .clearSignature()
                 .build();
@@ -162,7 +162,7 @@ public class NovaService {
             byte[] signature = signer.generateSignature();
 
             gateway_location_res_v1 response = stub.location(gateway_location_req_v1.newBuilder()
-                .setGateway(ByteString.copyFrom(gatewayId.getBytes()))
+                .setGateway(ByteString.copyFrom(HeliumHelper.nameToPubAddress(gatewayId)))
                 .setSigner(this.owner)
                 .setSignature(ByteString.copyFrom(signature))
                 .build());
@@ -178,6 +178,7 @@ public class NovaService {
         } catch ( StatusRuntimeException x ) {
             prometeusService.addHeliumTotalError();
             log.warn("Nova Backend not reachable");
+            log.warn(x.getMessage());
             return null;
         } finally {
             if ( channel != null ) channel.shutdown();
