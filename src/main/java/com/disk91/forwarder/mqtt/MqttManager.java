@@ -175,13 +175,17 @@ public class MqttManager implements MqttCallback {
     // stop the listener once we request a stop of the application
     public void stopManager() {
         try {
-            if ( this.subscribeTopic != null ) {
-                this.mqttClient.unsubscribe(this.subscribeTopic);
+            if ( this.initSuccess ) {
+                if ( this.mqttClient.isConnected() ) {
+                    if (this.subscribeTopic != null) {
+                        this.mqttClient.unsubscribe(this.subscribeTopic);
+                    }
+                    mqttClient.disconnect();
+                }
+                mqttClient.close();
+                this.deviceEuis.clear();
+                this.deviceEuis = null;
             }
-            mqttClient.disconnect();
-            mqttClient.close();
-            this.deviceEuis.clear();
-            this.deviceEuis = null;
         } catch (MqttException me) {
             log.error("MQTT STOP ERROR", me);
         }
@@ -249,39 +253,44 @@ public class MqttManager implements MqttCallback {
         long start = Now.NowUtcMs();
         log.debug("MQTT - MessageArrived on "+topicName);
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        mapper.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            mapper.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
 
-        // Device Id comes from the topic, looks like a mess
-        String [] topics = topicName.split("/");
-        if ( topics.length > this.downlinkDevIdField ) {
-            String deviceEui = topics[this.downlinkDevIdField];
-            if ( Stuff.isAnHexString(deviceEui) ) {
-                // verify the device Id is authorized
-                if ( this.deviceEuis.get(deviceEui.toLowerCase()) != null ) {
+            // Device Id comes from the topic, looks like a mess
+            String[] topics = topicName.split("/");
+            if (topics.length > this.downlinkDevIdField) {
+                String deviceEui = topics[this.downlinkDevIdField];
+                if (Stuff.isAnHexString(deviceEui)) {
+                    // verify the device Id is authorized
+                    if (this.deviceEuis.get(deviceEui.toLowerCase()) != null) {
 
-                    // process the payload
-                    try {
-                        HeliumMqttDownlinkPayload hmm = mapper.readValue(message.toString(), HeliumMqttDownlinkPayload.class);
-                        downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
-                        log.debug("Downlink registered for processing");
-                    } catch (JsonProcessingException x) {
-                        log.warn("Impossible to extract downlink payload from " + this.downTopic + "(" + this.url + ") skipping");
+                        // process the payload
+                        try {
+                            HeliumMqttDownlinkPayload hmm = mapper.readValue(message.toString(), HeliumMqttDownlinkPayload.class);
+                            downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
+                            log.debug("Downlink registered for processing");
+                        } catch (JsonProcessingException x) {
+                            log.warn("Impossible to extract downlink payload from " + this.downTopic + "(" + this.url + ") skipping");
+                        }
+
+                    } else {
+                        // can be normal due to load balancing
+                        // @TODO when balanced, we could process it twice potentially
+                        // but a such case usually happen before a restart cleaning the cache
+                        log.debug("Downlink from a device currently unknown");
                     }
-
                 } else {
-                    // can be normal due to load balancing
-                    // @TODO when balanced, we could process it twice potentially
-                    // but a such case usually happen before a restart cleaning the cache
-                    log.debug("Downlink from a device currently unknown");
+                    log.debug("DevEui format is not an hexString");
                 }
             } else {
-                log.debug("DevEui format is not an hexString");
+                log.debug("Can't find the devEUI field in topic");
             }
-        } else {
-            log.debug("Can't find the devEUI field in topic");
+        } catch (Exception x) {
+            log.warn("Exception in processing MQTT donwlink "+x.getMessage());
+            x.printStackTrace();
         }
     }
 
