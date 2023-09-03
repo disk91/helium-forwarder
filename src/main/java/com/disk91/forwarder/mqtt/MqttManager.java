@@ -13,11 +13,12 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+@Component
 public class MqttManager implements MqttCallback {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
@@ -245,7 +246,7 @@ public class MqttManager implements MqttCallback {
     }
 
     @Autowired
-    protected static DownlinkService downlinkService;
+    protected DownlinkService downlinkService;
 
     @Override
     public void messageArrived(String topicName, MqttMessage message) throws Exception {
@@ -270,11 +271,7 @@ public class MqttManager implements MqttCallback {
                         // process the payload
                         try {
                             HeliumMqttDownlinkPayload hmm = mapper.readValue(message.toString(), HeliumMqttDownlinkPayload.class);
-                            if ( downlinkService != null ) {
-                                downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
-                            } else {
-                                log.error("Donwlink Service null ?!?");
-                            }
+                            downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
                             log.debug("Downlink registered for processing");
                         } catch (JsonProcessingException x) {
                             log.warn("Impossible to extract downlink payload from " + this.downTopic + "(" + this.url + ") skipping");
