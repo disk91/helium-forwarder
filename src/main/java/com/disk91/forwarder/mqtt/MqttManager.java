@@ -245,7 +245,7 @@ public class MqttManager implements MqttCallback {
     }
 
     @Autowired
-    protected DownlinkService downlinkService;
+    protected static DownlinkService downlinkService;
 
     @Override
     public void messageArrived(String topicName, MqttMessage message) throws Exception {
@@ -270,7 +270,11 @@ public class MqttManager implements MqttCallback {
                         // process the payload
                         try {
                             HeliumMqttDownlinkPayload hmm = mapper.readValue(message.toString(), HeliumMqttDownlinkPayload.class);
-                            downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
+                            if ( downlinkService != null ) {
+                                downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
+                            } else {
+                                log.error("Donwlink Service null ?!?");
+                            }
                             log.debug("Downlink registered for processing");
                         } catch (JsonProcessingException x) {
                             log.warn("Impossible to extract downlink payload from " + this.downTopic + "(" + this.url + ") skipping");
