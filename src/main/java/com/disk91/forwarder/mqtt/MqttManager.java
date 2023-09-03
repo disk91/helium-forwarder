@@ -39,6 +39,8 @@ public class MqttManager implements MqttCallback {
     private int downlinkDevIdField;
     private boolean initSuccess = false;
 
+    private boolean connected = false;
+
     /*
      * Up/Down topic format : device_id, device_name, device_eui, app_eui, and organization_id.
      * can be parameters so basically we listen to all and have to filter
@@ -145,10 +147,10 @@ public class MqttManager implements MqttCallback {
         try {
             this.mqttClient = new MqttClient(url, clientId, persistence);
             this.connectionOptions.setCleanSession(true);
-            this.connectionOptions.setAutomaticReconnect(true);
+            this.connectionOptions.setAutomaticReconnect(false);
             if ( _user.length() > 0 ) this.connectionOptions.setUserName(_user);
             if ( _password.length() > 0 ) this.connectionOptions.setPassword(_password.toCharArray());
-            this.connectionOptions.setConnectionTimeout(30);
+            this.connectionOptions.setConnectionTimeout(120);
             this.mqttClient.connect(this.connectionOptions);
             this.mqttClient.setCallback(this);
             if ( this.subscribeTopic != null ) {
@@ -156,6 +158,7 @@ public class MqttManager implements MqttCallback {
             }
             log.info("New mqtt listener for "+this.url);
             this.initSuccess = true;
+            this.connected = true;
         } catch (MqttException me) {
             log.error("MQTT ERROR", me);
         }
@@ -163,6 +166,10 @@ public class MqttManager implements MqttCallback {
 
     public boolean isInitSuccess() {
         return initSuccess;
+    }
+
+    public boolean isConnected() {
+        return initSuccess && connected;
     }
 
     // stop the listener once we request a stop of the application
@@ -173,6 +180,8 @@ public class MqttManager implements MqttCallback {
             }
             mqttClient.disconnect();
             mqttClient.close();
+            this.deviceEuis.clear();
+            this.deviceEuis = null;
         } catch (MqttException me) {
             log.error("MQTT STOP ERROR", me);
         }
@@ -215,9 +224,10 @@ public class MqttManager implements MqttCallback {
      * @see org.eclipse.paho.client.mqttv3.MqttCallback#connectionLost(java.lang.Throwable)
      */
     @Override
-    public void connectionLost(Throwable arg0) {
+    public void connectionLost(Throwable cause) {
         // don't care, will reconnect on next message
-        log.debug("MQTT - Connection Lost");
+        log.debug("MQTT - Connection Lost - "+cause.getMessage());
+        this.connected = false;
     }
 
     /*

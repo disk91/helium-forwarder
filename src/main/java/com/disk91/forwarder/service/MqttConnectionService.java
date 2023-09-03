@@ -45,10 +45,16 @@ public class MqttConnectionService {
         synchronized (lock) {
             m = mqttConnections.get(key);
         }
-        if ( m != null ) {
+        if ( m != null && m.mqqt.isConnected() ) {
             m.lastUsed = Now.NowUtcMs();
             return m.mqqt;
         } else {
+            if ( m != null ) {
+                // clear the previous Manager that has been disconnected
+                m.mqqt.stopManager();
+                mqttConnections.remove(key);
+            }
+            // create a new Manager
             MqttManager mm = new MqttManager(
                 endpoint,
                 clientId,
