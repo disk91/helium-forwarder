@@ -1,24 +1,19 @@
 package com.disk91.forwarder.mqtt;
 
 import com.disk91.forwarder.api.interfaces.HeliumMqttDownlinkPayload;
-import com.disk91.forwarder.api.interfaces.HeliumMqttPayload;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.service.DownlinkService;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import fr.ingeniousthings.tools.*;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.postgresql.shaded.com.ongres.scram.common.bouncycastle.base64.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.print.attribute.standard.DialogOwner;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -101,7 +96,7 @@ public class MqttManager implements MqttCallback {
                 }
             }
         } catch (Exception e) {
-            log.info("Invalid mqtt server sequence: "+_endpoint);
+            log.warn("Invalid mqtt server sequence: "+_endpoint);
             return;
         }
 
@@ -141,7 +136,7 @@ public class MqttManager implements MqttCallback {
                 this.subscribeTopic = this.subscribeTopic.replaceAll("/.*[+].*[+].*/", "/+/");
                 log.info("Downtopic: " + _downTopic + " Subscription topic: " + this.subscribeTopic);
             } else {
-                log.info("We have a Mqtt setup without a supported path for "+this.url+" ("+_downTopic+")");
+                log.warn("We have a Mqtt setup without a supported path for "+this.url+" ("+_downTopic+")");
             }
         } else this.subscribeTopic = null;
 
@@ -196,7 +191,7 @@ public class MqttManager implements MqttCallback {
                 .replace("{{app_eui}}", message.getApp_eui() )
                 .replace("{{organization_id}}", message.getMetadata().getOrganization_id() );
 
-            log.info("Publish on topic ("+_upTopic+") from ("+upTopic+")");
+            log.debug("Publish on topic ("+_upTopic+") from ("+upTopic+")");
 
             try {
                 ObjectMapper mapper = new ObjectMapper();
@@ -242,7 +237,7 @@ public class MqttManager implements MqttCallback {
     public void messageArrived(String topicName, MqttMessage message) throws Exception {
         // Leave it blank for Publisher
         long start = Now.NowUtcMs();
-        log.info("MQTT - MessageArrived on "+topicName);
+        log.debug("MQTT - MessageArrived on "+topicName);
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
@@ -261,6 +256,7 @@ public class MqttManager implements MqttCallback {
                     try {
                         HeliumMqttDownlinkPayload hmm = mapper.readValue(message.toString(), HeliumMqttDownlinkPayload.class);
                         downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
+                        log.debug("Downlink registered for processing");
                     } catch (JsonProcessingException x) {
                         log.warn("Impossible to extract downlink payload from " + this.downTopic + "(" + this.url + ") skipping");
                     }
@@ -271,7 +267,11 @@ public class MqttManager implements MqttCallback {
                     // but a such case usually happen before a restart cleaning the cache
                     log.debug("Downlink from a device currently unknown");
                 }
+            } else {
+                log.debug("DevEui format is not an hexString");
             }
+        } else {
+            log.debug("Can't find the devEUI field in topic");
         }
     }
 
