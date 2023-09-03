@@ -17,7 +17,7 @@ build: nodes
 update-nodes: nodes
 	cd $(CONSOLE_DIR) ; docker compose stop fwnode1
 	cd $(CONSOLE_DIR) ; docker compose up -d fwnode1
-	sleep 10
+	sleep 15
 	cd $(CONSOLE_DIR) ; docker compose stop fwnode2
 	cd $(CONSOLE_DIR) ; docker compose up -d fwnode2
 
