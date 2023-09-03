@@ -166,7 +166,7 @@ public class DownlinkService {
         DelayedDownlink dl = new DelayedDownlink();
         dl.devEui = ds.devEui;
         String s = new String(Base64.decodeBase64(d.getPayload_raw()));
-        if ( s.compareToIgnoreCase("__clear_downlink_queue__") == 0 ) {
+        if ( s.compareToIgnoreCase("__clear_downlink_queue__") == 0 || d.getPayload_raw().compareToIgnoreCase("__clear_downlink_queue__") == 0 ) {
             dl.type = DOWNLINK_TYPE.CLEAR;
             dl.payloadB64 = null;
             dl.port = 0;
@@ -199,7 +199,7 @@ public class DownlinkService {
         DelayedDownlink dl = new DelayedDownlink();
         dl.devEui = deviceId;
         String s = new String(Base64.decodeBase64(d.getPayload_raw()));
-        if ( s.compareToIgnoreCase("__clear_downlink_queue__") == 0 ) {
+        if ( s.compareToIgnoreCase("__clear_downlink_queue__") == 0 || d.getPayload_raw().compareToIgnoreCase("__clear_downlink_queue__") == 0 ) {
             dl.type = DOWNLINK_TYPE.CLEAR;
             dl.payloadB64 = null;
             dl.port = 0;
