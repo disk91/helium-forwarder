@@ -11,9 +11,9 @@ the  purpose is to maintain a retro-compatibility with existing integrations for
    - Payload enrichment with gateway location
    - Payload transformation api endpoint Chirsptack to Helium
    - Payload enrichment api endpoint Chipstack to Chirpstack
+   - Mqtt integration
 
  * coming next 
-   - mqtt integration
    - streamr integration
    - data store
 
@@ -26,8 +26,7 @@ to see the configuration in action.
 
 ## Dependencies
 
-This solution rely on [helium-etl](https://github.com/disk91/helium-etl) API to determine the hotspot positions. If you need
-this information, you need to run your own etl or contract for accessing my running API. Contact me for this.
+The Hostpot position can be obtained from Helium Packet Router (HPR) of Helium ETL. Default and recommended is HPR. 
 
 ## Build the application
 
