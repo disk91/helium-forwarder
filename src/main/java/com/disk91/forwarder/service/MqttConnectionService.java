@@ -4,6 +4,7 @@ import com.disk91.forwarder.mqtt.MqttManager;
 import fr.ingeniousthings.tools.Now;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +27,9 @@ public class MqttConnectionService {
 
     private static final Object lock = new Object();
     private HashMap<String,MqttConnection> mqttConnections;
+
+    @Autowired
+    protected DownlinkService downlinkService;
 
     @PostConstruct
     protected void initMqttService() {
@@ -59,7 +63,8 @@ public class MqttConnectionService {
                 endpoint,
                 clientId,
                 upTopic,
-                downTopic
+                downTopic,
+                downlinkService
             );
             if ( mm.isInitSuccess() ) {
                 m = new MqttConnection();

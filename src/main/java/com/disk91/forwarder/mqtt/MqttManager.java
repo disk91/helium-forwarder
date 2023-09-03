@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-@Component
+
 public class MqttManager implements MqttCallback {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
@@ -42,6 +42,9 @@ public class MqttManager implements MqttCallback {
 
     private boolean connected = false;
 
+    protected DownlinkService downlinkService;
+
+
     /*
      * Up/Down topic format : device_id, device_name, device_eui, app_eui, and organization_id.
      * can be parameters so basically we listen to all and have to filter
@@ -52,13 +55,15 @@ public class MqttManager implements MqttCallback {
             String _endpoint,
             String _clientId,
             String _upTopic,
-            String _downTopic
+            String _downTopic,
+            DownlinkService _downlinkService
     ) {
         int _port=0;
         String _scheme="";
         String _user="";
         String _password="";
         String _server="";
+        this.downlinkService = _downlinkService;
         this.downlinkDevIdField = -1;
         this.deviceEuis=new HashMap<>();
         try {
@@ -244,9 +249,6 @@ public class MqttManager implements MqttCallback {
         // log.info("MQTT - delivery completed");
 
     }
-
-    @Autowired
-    protected DownlinkService downlinkService;
 
     @Override
     public void messageArrived(String topicName, MqttMessage message) throws Exception {
