@@ -217,7 +217,7 @@ public class MqttManager implements MqttCallback {
                 String _message = mapper.writeValueAsString(message);
                 MqttMessage mqttmessage = new MqttMessage(_message.getBytes());
                 mqttmessage.setQos(MQTT_QOS);
-                this.mqttClient.publish(upTopic, mqttmessage);
+                this.mqttClient.publish(_upTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
                 log.error("MQTT Parse exception for "+message.getDev_eui());
