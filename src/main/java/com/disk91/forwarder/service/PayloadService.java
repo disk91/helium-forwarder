@@ -113,7 +113,7 @@ public class PayloadService {
         public INTEGRATION_VERB verb = INTEGRATION_VERB.UNKNOWN;
         public String endpoint;
         public String topicUp;
-
+        public int qos;
         public String topicDown;
         public String urlparam;
         public KeyValue headers= new KeyValue();
@@ -174,7 +174,15 @@ public class PayloadService {
             dc.type = INTEGRATION_TYPE.MQTT;
             dc.topicUp = req.getHeader("huptopic");
             dc.topicDown = req.getHeader("hdntopic");
-
+            String sQos = req.getHeader("hqos");
+            dc.qos = -1;
+            if ( sQos != null && sQos.length() == 1 ) {
+                try {
+                    dc.qos = Integer.parseInt(sQos);
+                } catch (Exception e) {
+                    dc.qos = -1;
+                };
+            }
             dc.endpoint = req.getHeader("hendpoint");
             if ( dc.endpoint.length() < 5 ) return false;
             if ( ! dc.endpoint.startsWith("mqtt") ) return false;
@@ -382,7 +390,8 @@ public class PayloadService {
             o.endpoint,
             null,
             o.topicUp,
-            o.topicDown
+            o.topicDown,
+            o.qos
         );
         if ( m != null ) {
             return m.publishMessage(o.helium);

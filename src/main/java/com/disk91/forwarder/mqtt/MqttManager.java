@@ -12,8 +12,6 @@ import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.regex.Matcher;
@@ -23,7 +21,7 @@ public class MqttManager implements MqttCallback {
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    protected static final int MQTT_QOS = 0;
+    protected static final int MQTT_QOS = 2;
 
     private MqttClient mqttClient;
     private MqttConnectOptions connectionOptions;
@@ -31,7 +29,7 @@ public class MqttManager implements MqttCallback {
 
     private String clientId;
     private String url;
-
+    private int qos;
     private String upTopic;
     private String downTopic;
     private String subscribeTopic;
@@ -56,6 +54,7 @@ public class MqttManager implements MqttCallback {
             String _clientId,
             String _upTopic,
             String _downTopic,
+            int _qos,
             DownlinkService _downlinkService
     ) {
         int _port=0;
@@ -115,6 +114,7 @@ public class MqttManager implements MqttCallback {
         this.url = _scheme+_server+":"+_port;
         this.upTopic = _upTopic;
         this.downTopic = _downTopic;
+        this.qos = _qos;
 
         if (this.downTopic != null && this.downTopic.length() > 0 ) {
             // if we don't have {{device_id}} in the
@@ -212,11 +212,12 @@ public class MqttManager implements MqttCallback {
 
             log.debug("Publish on topic ("+_upTopic+") from ("+upTopic+")");
 
+            int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
             try {
                 ObjectMapper mapper = new ObjectMapper();
                 String _message = mapper.writeValueAsString(message);
                 MqttMessage mqttmessage = new MqttMessage(_message.getBytes());
-                mqttmessage.setQos(MQTT_QOS);
+                mqttmessage.setQos(_qos);
                 this.mqttClient.publish(_upTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
