@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -32,7 +33,7 @@ public class PayloadService {
     protected DownlinkService downlinkService;
 
     protected boolean uplinkOpen = true;
-    protected boolean asyncUplinkEnable = true;
+    protected volatile boolean asyncUplinkEnable = true;
 
     protected boolean closeForRequest = false;
     public boolean isStateClose() { return closeForRequest; }
@@ -169,8 +170,8 @@ public class PayloadService {
             if ( dc.verb == INTEGRATION_VERB.UNKNOWN ) return false;
             if ( ! dc.endpoint.toLowerCase().startsWith("http") ) return false;
             if ( dc.endpoint.contains("internal/3.0") ) return false;
-        }
-        if ( type.compareToIgnoreCase("mqtt") == 0 ) {
+        } else if ( type.compareToIgnoreCase("mqtt") == 0 ) {
+            log.debug("Got a MQTT Integration");
             dc.type = INTEGRATION_TYPE.MQTT;
             dc.topicUp = req.getHeader("huptopic");
             dc.topicDown = req.getHeader("hdntopic");
@@ -188,9 +189,12 @@ public class PayloadService {
             if ( ! dc.endpoint.startsWith("mqtt") ) return false;
             if ( dc.topicUp.length() < 3 ) return false;
             if ( dc.topicDown.length() > 0 && dc.topicDown.length() < 3 ) return false;
+        } else {
+            // unsupported type
+            log.warn("Received unsupported type ("+type.substring(0,Math.min(type.length(), 6))+")");
         }
         // type.compareToIgnoreCase("google_sheets") == 0
-        log.debug("Add Frame in queue");
+        log.debug("Add Frame in queue ("+type+")");
         asyncUplink.add(dc);
         prometeusService.addUplinkInQueue();
         return true;
@@ -211,8 +215,8 @@ public class PayloadService {
         public void run() {
             this.status = true;
             log.debug("Starting Payload process thread "+id);
-            DelayedUplink w;
-            while ( (w = queue.poll()) != null || asyncUplinkEnable ) {
+            DelayedUplink w = queue.poll();
+            while ( w != null || asyncUplinkEnable ) {
                 try {
                     if (w != null) {
                         // retrial limited to 3 attempt and every 10 seconds
@@ -244,6 +248,7 @@ public class PayloadService {
                                 if (!processHttp(w)) {
                                     w.retry++;
                                     if (w.retry < 3) {
+                                        log.debug("Http failure, add to retry");
                                         prometeusService.addUplinkRetry();
                                         prometeusService.addUplinkInQueue();
                                         w.lastTrial = Now.NowUtcMs();
@@ -257,6 +262,7 @@ public class PayloadService {
                                 if (!processMqtt(w)) {
                                     w.retry++;
                                     if (w.retry < 3) {
+                                        log.debug("Mqtt failure, add to retry");
                                         prometeusService.addUplinkRetry();
                                         prometeusService.addUplinkInQueue();
                                         w.lastTrial = Now.NowUtcMs();
@@ -266,6 +272,8 @@ public class PayloadService {
                                         prometeusService.addUplinkFailure();
                                     }
                                 }
+                            } else {
+                                log.warn("Received an invalid type "+w.type);
                             }
                         }
                     } else {
@@ -274,6 +282,8 @@ public class PayloadService {
                 } catch (Exception x) {
                     log.error("Exception in processing frame "+x.getMessage());
                     x.printStackTrace();
+                } finally {
+                    w = queue.poll();
                 }
             }
             log.debug("Closing Payload process thread "+id);
@@ -407,7 +417,10 @@ public class PayloadService {
             DelayedUplink o
     ) {
 
-        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(800);
+        factory.setReadTimeout(800);
+        RestTemplate restTemplate = new RestTemplate(factory);
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
