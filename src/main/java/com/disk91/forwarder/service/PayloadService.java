@@ -448,13 +448,17 @@ public class PayloadService {
             if ( responseEntity.getStatusCode().is2xxSuccessful() ) {
                 return true;
             }
+            log.debug("Return code was "+responseEntity.getStatusCode());
             return false;
 
         } catch (HttpClientErrorException e) {
+            log.debug("Http client error : "+e.getMessage());
             return false;
         } catch (HttpServerErrorException e) {
+            log.debug("Http server error : "+e.getMessage());
             return false;
         } catch (Exception x ) {
+            log.debug("Http error : "+x.getMessage());
             return false;
         }
     }
