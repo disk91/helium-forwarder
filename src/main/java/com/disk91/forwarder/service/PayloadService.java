@@ -419,7 +419,7 @@ public class PayloadService {
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(800);
-        factory.setReadTimeout(800);
+        factory.setReadTimeout(1500);
         RestTemplate restTemplate = new RestTemplate(factory);
         try {
             HttpHeaders headers = new HttpHeaders();
