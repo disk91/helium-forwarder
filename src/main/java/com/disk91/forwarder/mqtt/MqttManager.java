@@ -239,11 +239,11 @@ public class MqttManager implements MqttCallback {
             if ( message == null ) return true; // reject and not retry
 
             // Compose uplink topic
-            String _locTopic = locTopic.replace("{{device_id}}", message.getDeviceEui())
-                .replace("{{device_name}}", message.getDeviceName() )
-                .replace("{{device_eui}}",message.getDeviceEui() )
-                .replace("{{app_eui}}", message.getAppEui())
-                .replace("{{organization_id}}", message.getOrgId() );
+            String _locTopic = locTopic.replace("{{device_id}}", message.getDev_eui())
+                .replace("{{device_name}}", message.getName() )
+                .replace("{{device_eui}}",message.getDev_eui() )
+                .replace("{{app_eui}}", message.getApp_eui())
+                .replace("{{organization_id}}", message.getOrganization_id() );
 
             log.debug("Publish loc on topic ("+_locTopic+") from ("+locTopic+")");
 
@@ -256,7 +256,7 @@ public class MqttManager implements MqttCallback {
                 this.mqttClient.publish(_locTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
-                log.error("MQTT Loc Parse exception for "+message.getDeviceEui());
+                log.error("MQTT Loc Parse exception for "+message.getDev_eui());
             }
         } catch (MqttException me) {
             log.error("MQTT Loc Publish Error", me);

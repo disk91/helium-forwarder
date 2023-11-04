@@ -8,10 +8,10 @@ public class HeliumLocPayload {
 
     /*
         {
-          "deviceEui" : "01a2b3c4d5060708",
-          "appEui" : "0102030405a6b7c8",
-          "orgId" : "1231-1315-1515315315",
-          "deviceName" : "myDevice",
+          "dev_eui" : "01a2b3c4d5060708",
+          "app_eui" : "0102030405a6b7c8",
+          "organization_id" : "1231-1315-1515315315",
+          "name" : "myDevice",
           "latitude" : 42.2,
           "longitude": 3.5,
           "accuracy": 20,
@@ -19,16 +19,16 @@ public class HeliumLocPayload {
         }
     */
     @Schema(description = "Device eui", required = false)
-    protected String deviceEui;
+    protected String dev_eui;
 
     @Schema(description = "Organization (Tenant) id", required = false)
-    protected String orgId;
+    protected String organization_id;
 
     @Schema(description = "Application / Join eui", required = false)
-    protected String appEui;
+    protected String app_eui;
 
     @Schema(description = "Device name", required = false)
-    protected String deviceName;
+    protected String name;
 
     @Schema(description = "Device latitude", required = false)
     protected double latitude;
@@ -45,20 +45,20 @@ public class HeliumLocPayload {
     // ---
 
 
-    public String getDeviceEui() {
-        return deviceEui;
+    public String getDev_eui() {
+        return dev_eui;
     }
 
-    public void setDeviceEui(String deviceEui) {
-        this.deviceEui = deviceEui;
+    public void setDev_eui(String dev_eui) {
+        this.dev_eui = dev_eui;
     }
 
-    public String getDeviceName() {
-        return deviceName;
+    public String getName() {
+        return name;
     }
 
-    public void setDeviceName(String deviceName) {
-        this.deviceName = deviceName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public double getLatitude() {
@@ -93,19 +93,19 @@ public class HeliumLocPayload {
         this.source = source;
     }
 
-    public String getAppEui() {
-        return appEui;
+    public String getApp_eui() {
+        return app_eui;
     }
 
-    public void setAppEui(String appEui) {
-        this.appEui = appEui;
+    public void setApp_eui(String app_eui) {
+        this.app_eui = app_eui;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getOrganization_id() {
+        return organization_id;
     }
 
-    public void setOrgId(String orgId) {
-        this.orgId = orgId;
+    public void setOrganization_id(String organization_id) {
+        this.organization_id = organization_id;
     }
 }

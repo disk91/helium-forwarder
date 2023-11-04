@@ -345,10 +345,10 @@ public class PayloadService {
         }
 
         HeliumLocPayload payload = new HeliumLocPayload();
-        payload.setDeviceEui(c.getDeviceInfo().getDevEui());
-        payload.setAppEui(appEui);
-        payload.setDeviceName(c.getDeviceInfo().getDeviceName());
-        payload.setOrgId(c.getDeviceInfo().getTenantId());
+        payload.setDev_eui(c.getDeviceInfo().getDevEui());
+        payload.setApp_eui(appEui);
+        payload.setName(c.getDeviceInfo().getDeviceName());
+        payload.setOrganization_id(c.getDeviceInfo().getTenantId());
         payload.setLatitude(c.getLocation().getLatitude());
         payload.setLongitude(c.getLocation().getLongitude());
         payload.setAccuracy(c.getLocation().getAccuracy());
