@@ -1,7 +1,8 @@
 package com.disk91.forwarder.service;
 
 import com.disk91.forwarder.ForwarderConfig;
-import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.api.interfaces.ChirpstackPayload;
+import com.disk91.forwarder.api.interfaces.HeliumLocPayload;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.api.interfaces.sub.*;
 import com.disk91.forwarder.mqtt.MqttManager;
@@ -110,16 +111,23 @@ public class PayloadService {
 
     private class DelayedUplink {
 
+        public static final int EVENT_TYPE_UPLINK = 0;
+        public static final int EVENT_TYPE_LOCATION = 1;
+
         public INTEGRATION_TYPE type = INTEGRATION_TYPE.UNKNOWN;
         public INTEGRATION_VERB verb = INTEGRATION_VERB.UNKNOWN;
         public String endpoint;
+        public String locendpoint;
         public String topicUp;
+        public String topicLoc;
         public int qos;
         public String topicDown;
         public String urlparam;
         public KeyValue headers= new KeyValue();
-        public ChipstackPayload chirpstack;
+        public ChirpstackPayload chirpstack;
+        public int eventType;
         public HeliumPayload helium = null;
+        public HeliumLocPayload locPayload = null;
 
         public int retry = 0;
         public long lastTrial=0;
@@ -127,17 +135,21 @@ public class PayloadService {
 
     }
 
-    public boolean asyncProcessLocation(HttpServletRequest req, ChipstackPayload c) {
-        log.info("Lat: "+c.getLocation().getLatitude()+", Lon: "+c.getLocation().getLongitude()+", Acc: "+c.getLocation().getAccuracy()+", Src: "+c.getLocation().getSource());
-        return true;
-    }
-
-    public boolean asyncProcessUplink(HttpServletRequest req, ChipstackPayload c) {
+    public boolean asyncProcessEvent(HttpServletRequest req, ChirpstackPayload c, String evtType) {
         if ( forwarderConfig.isForwarderBalancerMode() ) return false;
         if (!this.uplinkOpen) return false;
 
         DelayedUplink dc = new DelayedUplink();
         dc.chirpstack = c;
+        if ( evtType.compareToIgnoreCase("up") == 0 ) {
+            dc.eventType = DelayedUplink.EVENT_TYPE_UPLINK;
+        } else if ( evtType.compareToIgnoreCase("location") == 0 ) {
+            dc.eventType = DelayedUplink.EVENT_TYPE_LOCATION;
+        } else {
+            log.error("Invalid Type received ("+evtType+")");
+            return false;
+        }
+
         /* --- list headers
         Enumeration<String> ss = req.getHeaderNames();
         while (ss.hasMoreElements()) {
@@ -160,6 +172,7 @@ public class PayloadService {
             else if ( v.compareToIgnoreCase("get") == 0 ) dc.verb = INTEGRATION_VERB.GET;
             else if ( v.compareToIgnoreCase("put") == 0 ) dc.verb = INTEGRATION_VERB.PUT;
             dc.endpoint = req.getHeader("hendpoint");
+            dc.locendpoint = req.getHeader("hlocendpoint");
             dc.urlparam = req.getHeader("hurlparam");
             String headers = req.getHeader("hheaders");
             try {
@@ -171,6 +184,12 @@ public class PayloadService {
             }
             // check
             if ( dc.endpoint.length() < 5 ) return false;
+            if ( dc.locendpoint == null || dc.locendpoint.length() < 5 ) {
+                dc.locendpoint = null;
+            } else {
+                if ( ! dc.locendpoint.toLowerCase().startsWith("http") ) return false;
+                if ( dc.locendpoint.contains("internal/3.0") ) return false;
+            }
             if ( dc.verb == INTEGRATION_VERB.UNKNOWN ) return false;
             if ( ! dc.endpoint.toLowerCase().startsWith("http") ) return false;
             if ( dc.endpoint.contains("internal/3.0") ) return false;
@@ -178,6 +197,11 @@ public class PayloadService {
             log.debug("Got a MQTT Integration");
             dc.type = INTEGRATION_TYPE.MQTT;
             dc.topicUp = req.getHeader("huptopic");
+            if ( req.getHeader("hloctopic") != null ) {
+                dc.topicLoc = req.getHeader("hloctopic");
+            } else {
+                dc.topicLoc = dc.topicUp+"/location";
+            }
             dc.topicDown = req.getHeader("hdntopic");
             String sQos = req.getHeader("hqos");
             dc.qos = -1;
@@ -233,18 +257,32 @@ public class PayloadService {
                             w.lastRecheck = now;
                             queue.add(w);
                         } else {
-                            log.debug("Find one in uplink queue");
+                            log.debug("Find one in message in queue");
                             prometeusService.remUplinkInQueue();
 
-                            w.helium = getHeliumPayload(w.chirpstack);
-
-                            // trace
-                            try {
-                                ObjectMapper mapper = new ObjectMapper();
-                                log.debug(">> " + mapper.writeValueAsString(w.helium));
-                            } catch (JsonProcessingException e) {
-                                log.error(e.getMessage());
-                                e.printStackTrace();
+                            if ( w.eventType == DelayedUplink.EVENT_TYPE_UPLINK ) {
+                                w.helium = getHeliumPayload(w.chirpstack);
+                                // trace
+                                try {
+                                    ObjectMapper mapper = new ObjectMapper();
+                                    log.debug(">> " + mapper.writeValueAsString(w.helium));
+                                } catch (JsonProcessingException e) {
+                                    log.error(e.getMessage());
+                                    e.printStackTrace();
+                                }
+                            } else if (w.eventType == DelayedUplink.EVENT_TYPE_LOCATION ) {
+                                w.locPayload = getHeliumLocPayload(w.chirpstack);
+                                // trace
+                                try {
+                                    ObjectMapper mapper = new ObjectMapper();
+                                    log.debug("## " + mapper.writeValueAsString(w.locPayload));
+                                } catch (JsonProcessingException e) {
+                                    log.error(e.getMessage());
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                log.error("Invalid type of event ("+w.eventType+")");
+                                continue;
                             }
 
                             // apply integration
@@ -295,8 +333,30 @@ public class PayloadService {
     }
 
 
+    public HeliumLocPayload getHeliumLocPayload(ChirpstackPayload c) {
 
-    public HeliumPayload getHeliumPayload(ChipstackPayload c) {
+        // get app_eui
+        String appEui = "0000000000000000";
+        if ( c.getObject() != null ) {
+            String _appEui = c.getObject().getOneKey("appeui");
+            if ( _appEui!=null && _appEui.length() == 16 ) {
+                appEui = _appEui;
+            }
+        }
+
+        HeliumLocPayload payload = new HeliumLocPayload();
+        payload.setDeviceEui(c.getDeviceInfo().getDevEui());
+        payload.setAppEui(appEui);
+        payload.setDeviceName(c.getDeviceInfo().getDeviceName());
+        payload.setOrgId(c.getDeviceInfo().getTenantId());
+        payload.setLatitude(c.getLocation().getLatitude());
+        payload.setLongitude(c.getLocation().getLongitude());
+        payload.setAccuracy(c.getLocation().getAccuracy());
+        payload.setSource(c.getLocation().getSource());
+        return payload;
+    }
+
+    public HeliumPayload getHeliumPayload(ChirpstackPayload c) {
         HeliumPayload h = new HeliumPayload();
 
         h.setApp_eui("0000000000000000");
@@ -374,7 +434,7 @@ public class PayloadService {
         return h;
     }
 
-    public ChipstackPayload enrichPayload( ChipstackPayload c ) {
+    public ChirpstackPayload enrichPayload(ChirpstackPayload c ) {
 
         if ( c.getRxInfo() != null ) {
 
@@ -404,11 +464,16 @@ public class PayloadService {
             o.endpoint,
             null,
             o.topicUp,
+            o.topicLoc,
             o.topicDown,
             o.qos
         );
         if ( m != null ) {
-            return m.publishMessage(o.helium);
+            if ( o.eventType == DelayedUplink.EVENT_TYPE_UPLINK ) {
+                return m.publishMessage(o.helium);
+            } else if ( o.eventType == DelayedUplink.EVENT_TYPE_LOCATION ) {
+                return m.publishLocation(o.locPayload);
+            }
         }
         return false;
     }
@@ -431,29 +496,70 @@ public class PayloadService {
             for ( String k : o.headers.getEntry().keySet() ) {
                 headers.add(k,o.headers.getOneKey(k));
             }
-            HttpEntity<HeliumPayload> he = new HttpEntity<HeliumPayload>(o.helium,headers);
-            String url=o.endpoint;
-            HttpMethod m;
-            switch (o.verb) {
-                default:
-                //case GET: m = HttpMethod.GET; break;
-                case POST: m = HttpMethod.POST; break;
-                case PUT: m = HttpMethod.PUT; break;
-            }
+            if ( o.eventType == DelayedUplink.EVENT_TYPE_UPLINK ) {
 
-            log.debug("Do "+m.name()+" to "+url);
-            ResponseEntity<String> responseEntity =
+                HttpEntity<HeliumPayload> he = new HttpEntity<HeliumPayload>(o.helium, headers);
+                String url = o.endpoint;
+                HttpMethod m;
+                switch (o.verb) {
+                    default:
+                        //case GET: m = HttpMethod.GET; break;
+                    case POST:
+                        m = HttpMethod.POST;
+                        break;
+                    case PUT:
+                        m = HttpMethod.PUT;
+                        break;
+                }
+
+                log.debug("Do " + m.name() + " to " + url);
+                ResponseEntity<String> responseEntity =
                     restTemplate.exchange(
-                            url,
-                            m,
-                            he,
-                            String.class
+                        url,
+                        m,
+                        he,
+                        String.class
                     );
-            if ( responseEntity.getStatusCode().is2xxSuccessful() ) {
-                return true;
+                if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                    return true;
+                }
+                log.debug("Return code was " + responseEntity.getStatusCode());
+                return false;
+
+            } else if ( o.eventType == DelayedUplink.EVENT_TYPE_LOCATION ) {
+
+                HttpEntity<HeliumLocPayload> he = new HttpEntity<HeliumLocPayload>(o.locPayload, headers);
+                String url = o.locendpoint;
+                HttpMethod m;
+                switch (o.verb) {
+                    default:
+                        //case GET: m = HttpMethod.GET; break;
+                    case POST:
+                        m = HttpMethod.POST;
+                        break;
+                    case PUT:
+                        m = HttpMethod.PUT;
+                        break;
+                }
+
+                log.debug("Loc - Do " + m.name() + " to " + url);
+                ResponseEntity<String> responseEntity =
+                    restTemplate.exchange(
+                        url,
+                        m,
+                        he,
+                        String.class
+                    );
+                if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                    return true;
+                }
+                log.debug("Return code was " + responseEntity.getStatusCode());
+                return false;
+
+            } else {
+                log.error("Invalid event type ("+o.eventType+")");
+                return true; // no need to retry this
             }
-            log.debug("Return code was "+responseEntity.getStatusCode());
-            return false;
 
         } catch (HttpClientErrorException e) {
             log.debug("Http client error : "+e.getMessage());

@@ -2,12 +2,10 @@ package com.disk91.forwarder.api;
 
 import com.disk91.forwarder.ForwarderConfig;
 import com.disk91.forwarder.api.interfaces.ActionResult;
-import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.api.interfaces.ChirpstackPayload;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
-import com.disk91.forwarder.service.LoadBalancerService;
 import com.disk91.forwarder.service.PayloadService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -50,7 +48,7 @@ public class TransformApi {
             method= RequestMethod.POST)
     public ResponseEntity<?> postChiprstacToHelium(
             HttpServletRequest request,
-            @RequestBody(required = true)  ChipstackPayload  message
+            @RequestBody(required = true) ChirpstackPayload message
     ) {
          try {
              HeliumPayload p = payloadService.getHeliumPayload(message);
@@ -63,7 +61,7 @@ public class TransformApi {
     @Operation(summary = "Enrich a Chirpstack payload with Gateway location",
             description = "Enrich a Chirpstack payload into Helium Payload, fair-use rule : identify yourself with a personal user-agent, max rate 1 req / min avg",
             responses = {
-                    @ApiResponse(responseCode = "200", description= "Success", content = @Content(schema = @Schema(implementation = ChipstackPayload.class))),
+                    @ApiResponse(responseCode = "200", description= "Success", content = @Content(schema = @Schema(implementation = ChirpstackPayload.class))),
                     @ApiResponse(responseCode = "400", description= "Bad Request", content = @Content(schema = @Schema(implementation = ActionResult.class))),
             }
     )
@@ -72,10 +70,10 @@ public class TransformApi {
             method= RequestMethod.POST)
     public ResponseEntity<?> postChiprstacEnrichement(
             HttpServletRequest request,
-            @RequestBody(required = true)  ChipstackPayload message
+            @RequestBody(required = true) ChirpstackPayload message
     ) {
         try {
-            ChipstackPayload p = payloadService.enrichPayload(message);
+            ChirpstackPayload p = payloadService.enrichPayload(message);
             return new ResponseEntity<>(p, HttpStatus.OK);
         } catch ( Exception x ) {
             return new ResponseEntity<>(ActionResult.BADREQUEST(), HttpStatus.BAD_REQUEST);

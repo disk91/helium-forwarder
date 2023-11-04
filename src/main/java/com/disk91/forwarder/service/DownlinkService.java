@@ -1,7 +1,7 @@
 package com.disk91.forwarder.service;
 
 import com.disk91.forwarder.ForwarderConfig;
-import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.api.interfaces.ChirpstackPayload;
 import com.disk91.forwarder.api.interfaces.HeliumDownlink;
 import com.disk91.forwarder.api.interfaces.HeliumMqttDownlinkPayload;
 import com.disk91.forwarder.service.itf.ChirpstackEnqueue;
@@ -95,7 +95,7 @@ public class DownlinkService {
         };
     }
 
-    protected String createDownlinkSession(DOWN_SESSION_TYPE t, ChipstackPayload c) {
+    protected String createDownlinkSession(DOWN_SESSION_TYPE t, ChirpstackPayload c) {
         DownlinkSession d = new DownlinkSession();
         d.type = t;
         d.creationTime = Now.NowUtcMs();

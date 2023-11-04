@@ -1,12 +1,9 @@
 package com.disk91.forwarder.api;
 
 import com.disk91.forwarder.api.interfaces.ActionResult;
-import com.disk91.forwarder.api.interfaces.ChipstackPayload;
 import com.disk91.forwarder.api.interfaces.HeliumDownlink;
 import com.disk91.forwarder.service.DownlinkService;
 import com.disk91.forwarder.service.PayloadService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;

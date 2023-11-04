@@ -1,8 +1,7 @@
 package com.disk91.forwarder.service;
 
 import com.disk91.forwarder.ForwarderConfig;
-import com.disk91.forwarder.api.interfaces.ActionResult;
-import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.api.interfaces.ChirpstackPayload;
 import fr.ingeniousthings.tools.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +13,6 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
 
@@ -77,7 +75,7 @@ public class LoadBalancerService {
     }
 
 
-    public boolean pushToNode(HttpServletRequest req, ChipstackPayload body, String event) {
+    public boolean pushToNode(HttpServletRequest req, ChirpstackPayload body, String event) {
 
         // load balancing based on deveui, select node base on
         byte eui[] = Tools.EuiStringToByteArray(body.getDeviceInfo().getDevEui());
@@ -120,7 +118,7 @@ public class LoadBalancerService {
         return false;
     }
 
-    protected boolean transferPayload(String endpoint, HttpServletRequest req, ChipstackPayload body, String event ) {
+    protected boolean transferPayload(String endpoint, HttpServletRequest req, ChirpstackPayload body, String event ) {
 
         RestTemplate restTemplate = new RestTemplate();
         try {

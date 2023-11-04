@@ -1,5 +1,6 @@
 package com.disk91.forwarder.mqtt;
 
+import com.disk91.forwarder.api.interfaces.HeliumLocPayload;
 import com.disk91.forwarder.api.interfaces.HeliumMqttDownlinkPayload;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.service.DownlinkService;
@@ -31,6 +32,7 @@ public class MqttManager implements MqttCallback {
     private String url;
     private int qos;
     private String upTopic;
+    private String locTopic;
     private String downTopic;
     private String subscribeTopic;
 
@@ -53,6 +55,7 @@ public class MqttManager implements MqttCallback {
             String _endpoint,
             String _clientId,
             String _upTopic,
+            String _locTopic,
             String _downTopic,
             int _qos,
             DownlinkService _downlinkService
@@ -113,6 +116,7 @@ public class MqttManager implements MqttCallback {
         } else clientId = _clientId;
         this.url = _scheme+_server+":"+_port;
         this.upTopic = _upTopic;
+        this.locTopic = _locTopic;
         this.downTopic = _downTopic;
         this.qos = _qos;
 
@@ -210,7 +214,7 @@ public class MqttManager implements MqttCallback {
                 .replace("{{app_eui}}", message.getApp_eui() )
                 .replace("{{organization_id}}", message.getMetadata().getOrganization_id() );
 
-            log.debug("Publish on topic ("+_upTopic+") from ("+upTopic+")");
+            log.debug("Publish up on topic ("+_upTopic+") from ("+upTopic+")");
 
             int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
             try {
@@ -221,10 +225,41 @@ public class MqttManager implements MqttCallback {
                 this.mqttClient.publish(_upTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
-                log.error("MQTT Parse exception for "+message.getDev_eui());
+                log.error("MQTT Up Parse exception for "+message.getDev_eui());
             }
         } catch (MqttException me) {
-            log.error("MQTT Publish Error", me);
+            log.error("MQTT Up Publish Error", me);
+        }
+        return false;
+    }
+
+    public boolean publishLocation( HeliumLocPayload message ) {
+        try {
+            // checks
+            if ( message == null ) return true; // reject and not retry
+
+            // Compose uplink topic
+            String _locTopic = locTopic.replace("{{device_id}}", message.getDeviceEui())
+                .replace("{{device_name}}", message.getDeviceName() )
+                .replace("{{device_eui}}",message.getDeviceEui() )
+                .replace("{{app_eui}}", message.getAppEui())
+                .replace("{{organization_id}}", message.getOrgId() );
+
+            log.debug("Publish loc on topic ("+_locTopic+") from ("+locTopic+")");
+
+            int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String _message = mapper.writeValueAsString(message);
+                MqttMessage mqttmessage = new MqttMessage(_message.getBytes());
+                mqttmessage.setQos(_qos);
+                this.mqttClient.publish(_locTopic, mqttmessage);
+                return true;
+            } catch (JsonProcessingException x) {
+                log.error("MQTT Loc Parse exception for "+message.getDeviceEui());
+            }
+        } catch (MqttException me) {
+            log.error("MQTT Loc Publish Error", me);
         }
         return false;
     }
