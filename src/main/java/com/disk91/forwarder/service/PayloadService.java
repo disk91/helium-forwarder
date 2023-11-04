@@ -127,6 +127,10 @@ public class PayloadService {
 
     }
 
+    public boolean asyncProcessLocation(HttpServletRequest req, ChipstackPayload c) {
+        log.info("Lat: "+c.getLocation().getLatitude()+", Lon: "+c.getLocation().getLongitude()+", Acc: "+c.getLocation().getAccuracy()+", Src: "+c.getLocation().getSource());
+        return true;
+    }
 
     public boolean asyncProcessUplink(HttpServletRequest req, ChipstackPayload c) {
         if ( forwarderConfig.isForwarderBalancerMode() ) return false;

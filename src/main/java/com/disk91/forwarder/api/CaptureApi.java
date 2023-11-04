@@ -3,6 +3,7 @@ package com.disk91.forwarder.api;
 import com.disk91.forwarder.ForwarderConfig;
 import com.disk91.forwarder.api.interfaces.ActionResult;
 import com.disk91.forwarder.api.interfaces.ChipstackPayload;
+import com.disk91.forwarder.api.interfaces.sub.KeyValue;
 import com.disk91.forwarder.service.LoadBalancerService;
 import com.disk91.forwarder.service.PayloadService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -77,13 +78,26 @@ public class CaptureApi {
             HttpServletRequest request,
             @Parameter(required = true, name = "event", description = "Get the type of event ( impacts body structure )")
             @RequestParam("event") String event,
-            @RequestBody(required = true)  ChipstackPayload /* String */  message
+            @RequestBody(required = true)  /*ChipstackPayload */ String  smessage
     ) {
 
         log.debug("Frame received");
+        log.info(smessage);
+
+        ChipstackPayload message;
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            message = mapper.readValue(smessage, ChipstackPayload.class);
+        } catch (JsonProcessingException e) {
+            log.error("Error in parsing payload for "+smessage);
+            message = new ChipstackPayload();
+        }
+
         if ( forwarderConfig.isForwarderBalancerMode() ) {
 
-            if ( event.compareToIgnoreCase("up") == 0 ) {
+            if (    event.compareToIgnoreCase("up") == 0
+                 || event.compareToIgnoreCase("location") == 0
+            ) {
                 if ( loadBalancerService.pushToNode(request,message,event) ) {
                     return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
                 }
@@ -104,13 +118,16 @@ public class CaptureApi {
             //  - location => position
             //  - integration => related to integration
 
-            if ( event.compareToIgnoreCase("up") != 0 ) {
-                // not an uplink message
-                return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.NO_CONTENT);
+            if ( event.compareToIgnoreCase("up") == 0
+            ) {
+                payloadService.asyncProcessUplink(request,message);
+                return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
+            } else if ( event.compareToIgnoreCase("location") == 0 ) {
+                payloadService.asyncProcessLocation(request,message);
+                return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
             }
-            payloadService.asyncProcessUplink(request,message);
-            return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
-
+            // not an uplink message or location message
+            return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.NO_CONTENT);
         }
 
     }

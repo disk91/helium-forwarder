@@ -1,9 +1,6 @@
 package com.disk91.forwarder.api.interfaces;
 
-import com.disk91.forwarder.api.interfaces.sub.ChirpstackDeviceInfo;
-import com.disk91.forwarder.api.interfaces.sub.ChirpstackRxInfo;
-import com.disk91.forwarder.api.interfaces.sub.ChirpstackTxInfo;
-import com.disk91.forwarder.api.interfaces.sub.KeyValue;
+import com.disk91.forwarder.api.interfaces.sub.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;
@@ -90,6 +87,14 @@ public class ChipstackPayload {
 
     rxInfo and txInfo are empty
 
+    // when location
+    location {
+        latitude:45.291898
+        longitude:-75.86377
+        source:"GEO_RESOLVER_GNSS"
+        accuracy:20
+    }
+
      */
 
 
@@ -129,6 +134,9 @@ public class ChipstackPayload {
     // txAck
     // uses queueItemId, fCntDown
     private String gatewayId;
+
+    // location Message
+    private ChirpstackLocation location;
 
     // ---
 
@@ -306,5 +314,13 @@ public class ChipstackPayload {
 
     public void setGatewayId(String gatewayId) {
         this.gatewayId = gatewayId;
+    }
+
+    public ChirpstackLocation getLocation() {
+        return location;
+    }
+
+    public void setLocation(ChirpstackLocation location) {
+        this.location = location;
     }
 }
