@@ -20,6 +20,7 @@ import javax.annotation.PostConstruct;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class NovaService {
@@ -161,7 +162,7 @@ public class NovaService {
             this.signer.update(requestToSignContent, 0, requestToSignContent.length);
             byte[] signature = signer.generateSignature();
 
-            gateway_location_res_v1 response = stub.location(gateway_location_req_v1.newBuilder()
+            gateway_location_res_v1 response = stub.withDeadlineAfter(3, TimeUnit.SECONDS).location(gateway_location_req_v1.newBuilder()
                 .setGateway(ByteString.copyFrom(HeliumHelper.nameToPubAddress(gatewayId)))
                 .setSigner(this.owner)
                 .setSignature(ByteString.copyFrom(signature))
@@ -177,7 +178,7 @@ public class NovaService {
 
         } catch ( StatusRuntimeException x ) {
             prometeusService.addHeliumTotalError();
-            log.warn("Nova Backend not reachable");
+            log.warn("Nova Backend not reachable or too slow");
             log.warn(x.getMessage());
             return null;
         } finally {
