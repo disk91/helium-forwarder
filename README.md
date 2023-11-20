@@ -36,11 +36,7 @@ See Makefile.
 - send SIGTERM message to the process (sent when docker stop), this will be clean the application properly.
 
 ## License
-This program is distributed according to [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) licence for any private 
-non-commercial IoT device fleet purpose, without restriction. This license is also applicable for commercial fleets under 
-500 devices.
-
-When used in a public / commercial service a license must be contracted for using this software ($500) price can be adjusted.
+This program is distributed according to [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) 
 
 ## Misc
 - Nova service GRPC proto can be found on - https://github.com/helium/proto/blob/master/src/service/iot_config.proto
