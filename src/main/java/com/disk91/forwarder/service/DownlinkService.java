@@ -268,7 +268,6 @@ public class DownlinkService {
                                 }
                             }
                         } else if ( w.type == DOWNLINK_TYPE.CLEAR ) {
-                            prometeusService.remDownlinkInQueue();
                             if ( ! processDownlinkClear(w) ) {
                                 w.retry++;
                                 if (w.retry < 3) {
