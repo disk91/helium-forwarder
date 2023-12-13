@@ -17,7 +17,11 @@ public class ChirpstackRxInfo {
             crcStatus:"CRC_OK",
             "metadata":{
                 "region_common_name":"EU868",
-                "region_name":"eu868"
+                "region_config_id":"eu868",
+                "gateway_h3index" : "61105...",
+                "gateway_lat" : "45.80...",
+                "gateway_long" : "3.09...",
+                "gateway_name" : "mythical-xxx..."
             }
         },
 

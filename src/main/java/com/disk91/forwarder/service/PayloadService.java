@@ -402,9 +402,29 @@ public class PayloadService {
           HntHotspot hh = new HntHotspot();
           hh.setId(rx.getMetadata().getGateway_id());
           hh.setName(rx.getMetadata().getGateway_name());
-          HotspotPosition p = locationService.getHotspotPosition(hh.getId());
-          hh.setLat(p.getPosition().getLat());
-          hh.setLng(p.getPosition().getLng());
+
+          // check if position is in the meta
+          boolean foundLoc = false;
+          if (   rx.getMetadata().getGateway_lat() != null && rx.getMetadata().getGateway_lat().length() > 1
+              && rx.getMetadata().getGateway_long() != null && rx.getMetadata().getGateway_long().length() > 1
+          ) {
+                // we have a pos, convert string to double
+                try {
+                    rx.getMetadata().setLon(Double.parseDouble(rx.getMetadata().getGateway_long()));
+                    rx.getMetadata().setLat(Double.parseDouble(rx.getMetadata().getGateway_lat()));
+                    hh.setLat(rx.getMetadata().getLat());
+                    hh.setLng(rx.getMetadata().getLon());
+                    foundLoc = true;
+                } catch ( NumberFormatException x ) {
+                    log.warn("Invalid Gateway location 2 ("+rx.getMetadata().getGateway_lat()+", "+rx.getMetadata().getGateway_long()+")");
+                }
+          }
+          if ( !foundLoc ) {
+              HotspotPosition p = locationService.getHotspotPosition(hh.getId());
+              hh.setLat(p.getPosition().getLat());
+              hh.setLng(p.getPosition().getLng());
+          }
+
           hh.setChannel(0);
           hh.setReported_at(DateConverters.StringDateToMs(rx.getTime()));
           hh.setRssi(rx.getRssi());
@@ -440,9 +460,25 @@ public class PayloadService {
 
             for ( ChirpstackRxInfo rx :c.getRxInfo() ) {
                 if ( rx.getMetadata() != null ) {
-                    HotspotPosition p = locationService.getHotspotPosition(rx.getMetadata().getGateway_id());
-                    rx.getMetadata().setLon(p.getPosition().getLng());
-                    rx.getMetadata().setLat(p.getPosition().getLat());
+                    // check if position is in the meta
+                    boolean foundLoc = false;
+                    if ( rx.getMetadata().getGateway_lat() != null && rx.getMetadata().getGateway_lat().length() > 1
+                      && rx.getMetadata().getGateway_long() != null && rx.getMetadata().getGateway_long().length() > 1
+                    ) {
+                        // we have a pos, convert string to double
+                        try {
+                            rx.getMetadata().setLon(Double.parseDouble(rx.getMetadata().getGateway_long()));
+                            rx.getMetadata().setLat(Double.parseDouble(rx.getMetadata().getGateway_lat()));
+                            foundLoc = true;
+                        } catch ( NumberFormatException x ) {
+                            log.warn("Invalid Gateway location ("+rx.getMetadata().getGateway_lat()+", "+rx.getMetadata().getGateway_long()+")");
+                        }
+                    }
+                    if ( !foundLoc ) {
+                        HotspotPosition p = locationService.getHotspotPosition(rx.getMetadata().getGateway_id());
+                        rx.getMetadata().setLon(p.getPosition().getLng());
+                        rx.getMetadata().setLat(p.getPosition().getLat());
+                    }
                 }
             }
 
