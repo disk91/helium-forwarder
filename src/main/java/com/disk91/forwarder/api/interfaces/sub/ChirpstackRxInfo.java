@@ -29,7 +29,7 @@ public class ChirpstackRxInfo {
 
     private String gatewayId;
     private long uplinkId;
-    private String gwTime;
+    private String gw_time;
     private int rssi;
 
     private double snr;
@@ -58,12 +58,12 @@ public class ChirpstackRxInfo {
         this.uplinkId = uplinkId;
     }
 
-    public String getGwTime() {
-        return gwTime;
+    public String getGw_time() {
+        return gw_time;
     }
 
-    public void setGwTime(String gwTime) {
-        this.gwTime = gwTime;
+    public void setGw_time(String gw_time) {
+        this.gw_time = gw_time;
     }
 
     public int getRssi() {
