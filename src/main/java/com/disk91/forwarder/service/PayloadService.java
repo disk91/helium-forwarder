@@ -426,7 +426,7 @@ public class PayloadService {
           }
 
           hh.setChannel(0);
-          hh.setReported_at(DateConverters.StringDateToMs(rx.getTime()));
+          hh.setReported_at(DateConverters.StringDateToMs(rx.getGwTime()));
           hh.setRssi(rx.getRssi());
           hh.setSnr(rx.getSnr());
 
