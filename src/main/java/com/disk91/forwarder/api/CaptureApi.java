@@ -5,6 +5,8 @@ import com.disk91.forwarder.api.interfaces.ActionResult;
 import com.disk91.forwarder.api.interfaces.ChirpstackPayload;
 import com.disk91.forwarder.service.LoadBalancerService;
 import com.disk91.forwarder.service.PayloadService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -80,13 +82,13 @@ public class CaptureApi {
 
         /* -- for tracing input when adding new event type */
         log.info(smessage);
-        ChipstackPayload message;
+        ChirpstackPayload message;
         try {
             ObjectMapper mapper = new ObjectMapper();
-            message = mapper.readValue(smessage, ChipstackPayload.class);
+            message = mapper.readValue(smessage, ChirpstackPayload.class);
         } catch (JsonProcessingException e) {
             log.error("Error in parsing payload for "+smessage);
-            message = new ChipstackPayload();
+            message = new ChirpstackPayload();
         }
 
 
