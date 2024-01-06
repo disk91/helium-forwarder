@@ -1,6 +1,9 @@
 package com.disk91.forwarder.api.interfaces.sub;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import fr.ingeniousthings.tools.Now;
+
+import java.util.Calendar;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 
@@ -29,7 +32,7 @@ public class ChirpstackRxInfo {
 
     private String gatewayId;
     private long uplinkId;
-    private String gw_time;
+    private String time;
     private int rssi;
 
     private double snr;
@@ -58,12 +61,12 @@ public class ChirpstackRxInfo {
         this.uplinkId = uplinkId;
     }
 
-    public String getGw_time() {
-        return gw_time;
+    public String getTime() {
+      return time;
     }
 
-    public void setGw_time(String gw_time) {
-        this.gw_time = gw_time;
+    public void setTime(String time) {
+        this.time = time;
     }
 
     public int getRssi() {

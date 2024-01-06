@@ -46,7 +46,9 @@ public class ChirpstackPayload {
                 "context":"EbkTFA==",
                 "metadata":{
                     "region_common_name":"EU868",
-                    "region_name":"eu868"
+                    "region_name":"eu868",
+                    lat: 0,
+                    lon: 0
                 }
             },
             {

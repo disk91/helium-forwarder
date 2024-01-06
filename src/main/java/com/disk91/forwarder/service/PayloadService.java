@@ -426,7 +426,12 @@ public class PayloadService {
           }
 
           hh.setChannel(0);
-          hh.setReported_at(DateConverters.StringDateToMs(rx.getGw_time()));
+          if ( rx.getTime() == null ) {
+              // in version 4.6.0 the payload is largely invalid with null values in date.
+              hh.setReported_at(DateConverters.StringDateToMs(c.getTime()));
+          } else {
+              hh.setReported_at(DateConverters.StringDateToMs(rx.getTime()));
+          }
           hh.setRssi(rx.getRssi());
           hh.setSnr(rx.getSnr());
 
