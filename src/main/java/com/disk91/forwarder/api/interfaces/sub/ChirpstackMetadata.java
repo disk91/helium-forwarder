@@ -27,6 +27,7 @@ public class ChirpstackMetadata {
     private String gateway_h3index;
 
 
+    // Lon et Lat are the double value used for the internal enrichment
     private double lat = 0.0;
     private double lon = 0.0;
 

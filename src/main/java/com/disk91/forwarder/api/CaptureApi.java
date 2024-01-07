@@ -91,7 +91,7 @@ public class CaptureApi {
             message = new ChirpstackPayload();
         }
         */
-        
+
 
         if ( forwarderConfig.isForwarderBalancerMode() ) {
 

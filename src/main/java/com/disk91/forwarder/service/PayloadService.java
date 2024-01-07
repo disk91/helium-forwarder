@@ -465,6 +465,7 @@ public class PayloadService {
         if ( c.getRxInfo() != null ) {
 
             for ( ChirpstackRxInfo rx :c.getRxInfo() ) {
+                rx.setTime(rx.getGwTime()); // for retro compatibility
                 if ( rx.getMetadata() != null ) {
                     // check if position is in the meta
                     boolean foundLoc = false;
