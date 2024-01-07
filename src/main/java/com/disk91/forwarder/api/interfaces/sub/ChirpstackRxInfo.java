@@ -22,7 +22,7 @@ public class ChirpstackRxInfo {
             "rssi":-41,
             "snr":7.8,
             "context":"EbkTFA==",
-            crcStatus:"CRC_OK",
+            "crcStatus":"CRC_OK",
             "metadata":{
                 "region_common_name":"EU868",
                 "region_config_id":"eu868",

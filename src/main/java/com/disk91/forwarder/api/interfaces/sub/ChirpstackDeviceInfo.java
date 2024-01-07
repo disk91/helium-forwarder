@@ -15,6 +15,7 @@ public class ChirpstackDeviceInfo {
             "deviceProfileName":"(EU868) Migration OTAA Without label",
             "deviceName":"disk91_test1",
             "devEui":"6081f9dde602cd71",
+            "deviceClassEnabled":"CLASS_A"
             "tags":{
                 "label":"Without label"
             }
@@ -29,6 +30,7 @@ public class ChirpstackDeviceInfo {
     private String deviceProfileName;
     private String deviceName;
     private String devEui;
+    private String deviceClassEnabled;
     private KeyValue tags;
 
     // ---
@@ -104,5 +106,13 @@ public class ChirpstackDeviceInfo {
 
     public void setTags(KeyValue tags) {
         this.tags = tags;
+    }
+
+    public String getDeviceClassEnabled() {
+        return deviceClassEnabled;
+    }
+
+    public void setDeviceClassEnabled(String deviceClassEnabled) {
+        this.deviceClassEnabled = deviceClassEnabled;
     }
 }

@@ -21,6 +21,7 @@ public class ChirpstackPayload {
             "deviceProfileName":"(EU868) Migration OTAA Without label",
             "deviceName":"disk91_test1",
             "devEui":"6081f9dde602cd71",
+            "deviceClassEnabled":"CLASS_A"
             "tags":{
                 "label":"Without label"
             }
@@ -40,16 +41,26 @@ public class ChirpstackPayload {
             {
                 "gatewayId":"c986398a305dee5a",
                 "uplinkId":65489,
+                // prior to 4.6
                 "time":"2023-05-29T19:50:10+00:00",
+                // from 4.6
+                "gwTime":"2024-01-07T11:05:31+00:00",
+                "nsTime":"2024-01-07T11:05:31.577525935+00:00
+
                 "rssi":-41,
                 "snr":7.8,
+                "location" : {
+                },
                 "context":"EbkTFA==",
                 "metadata":{
                     "region_common_name":"EU868",
-                    "region_name":"eu868",
-                    lat: 0,
-                    lon: 0
-                }
+                    "region_config_id":"eu868",
+                    "gateway_h3index" : "61105...",
+                    "gateway_lat" : "45.80...",
+                    "gateway_long" : "3.09...",
+                    "gateway_name" : "mythical-xxx..."
+                },
+                "crcStatus":"CRC_OK",
             },
             {
                 "gatewayId":"3c408850a5b4f27c",
