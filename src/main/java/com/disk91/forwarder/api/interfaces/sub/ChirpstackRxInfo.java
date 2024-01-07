@@ -13,7 +13,12 @@ public class ChirpstackRxInfo {
             {
             "gatewayId":"c986398a305dee5a",
             "uplinkId":65489,
+            // prior to 4.6
             "time":"2023-05-29T19:50:10+00:00",
+            // from 4.6
+            "gwTime":"2024-01-07T11:05:31+00:00",
+            "nsTime":"2024-01-07T11:05:31.577525935+00:00
+
             "rssi":-41,
             "snr":7.8,
             "context":"EbkTFA==",
@@ -32,7 +37,11 @@ public class ChirpstackRxInfo {
 
     private String gatewayId;
     private long uplinkId;
-    private String time;
+    private String gwTime;
+    private String nsTime;
+
+    private String time;    // retro compat
+
     private int rssi;
 
     private double snr;
@@ -61,8 +70,25 @@ public class ChirpstackRxInfo {
         this.uplinkId = uplinkId;
     }
 
+    public String getGwTime() {
+        return gwTime;
+    }
+
+    public void setGwTime(String gwTime) {
+        this.gwTime = gwTime;
+    }
+
+
+    public String getNsTime() {
+        return nsTime;
+    }
+
+    public void setNsTime(String nsTime) {
+        this.nsTime = nsTime;
+    }
+
     public String getTime() {
-      return time;
+        return time;
     }
 
     public void setTime(String time) {
