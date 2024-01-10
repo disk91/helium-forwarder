@@ -400,6 +400,8 @@ public class PayloadService {
             + c.getDeviceInfo().getDevEui().substring(0,4)+"-"
             + c.getDeviceInfo().getDevEui().substring(4,16)
         );
+        h.setUuid(c.getDeduplicationId());
+        h.setType("uplink");
         h.setName(c.getDeviceInfo().getDeviceName());
         h.setPayload(c.getData());
         h.setPort(c.getfPort());

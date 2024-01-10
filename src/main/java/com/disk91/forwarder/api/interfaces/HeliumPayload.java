@@ -106,6 +106,13 @@ public class HeliumPayload {
     @Schema(description = "Associated meta data", required = false)
     protected HntMetadata metadata;
 
+    @Schema(description = "Message UUID", required = false)
+    protected String uuid;
+
+    @Schema(description = "Message type", required = false)
+    protected String type;
+
+
     // ---
 
 
@@ -219,5 +226,21 @@ public class HeliumPayload {
 
     public void setDecoded(HntDecoded decoded) {
         this.decoded = decoded;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }
