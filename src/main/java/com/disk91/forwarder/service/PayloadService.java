@@ -391,7 +391,15 @@ public class PayloadService {
         h.setDownlink_url(endpoint);
 
         h.setFcnt(c.getfCnt());
-        h.setId(c.getDeduplicationId());
+        // this must be a device id but this is not existing with chirpstack, creating one from deveui
+        // 7c523974-4ce7-4a92-948b-55171a6e4d77 deveui is 16c
+        h.setId(
+              c.getDeviceInfo().getDevEui().substring(0,8)+"-"
+            + c.getDeviceInfo().getDevEui().substring(8,12)+"-"
+            + c.getDeviceInfo().getDevEui().substring(12,16)+"-"
+            + c.getDeviceInfo().getDevEui().substring(0,4)+"-"
+            + c.getDeviceInfo().getDevEui().substring(4,16)
+        );
         h.setName(c.getDeviceInfo().getDeviceName());
         h.setPayload(c.getData());
         h.setPort(c.getfPort());
