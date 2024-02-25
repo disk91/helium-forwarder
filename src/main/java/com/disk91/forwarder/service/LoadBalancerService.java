@@ -51,7 +51,7 @@ public class LoadBalancerService {
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
             headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-            HttpEntity he = new HttpEntity(headers);
+            HttpEntity<String> he = new HttpEntity<>(headers);
             String url=endpoint+"/capture/state/";
             ResponseEntity<String> responseEntity =
                     restTemplate.exchange(
@@ -60,10 +60,7 @@ public class LoadBalancerService {
                             he,
                             String.class
                     );
-            if ( responseEntity.getStatusCode() == HttpStatus.OK ) {
-                return true;
-            }
-            return false;
+            return responseEntity.getStatusCode() == HttpStatus.OK;
         } catch (HttpClientErrorException e) {
             return false;
         } catch (HttpServerErrorException e) {
@@ -78,7 +75,7 @@ public class LoadBalancerService {
     public boolean pushToNode(HttpServletRequest req, ChirpstackPayload body, String event) {
 
         // load balancing based on deveui, select node base on
-        byte eui[] = Tools.EuiStringToByteArray(body.getDeviceInfo().getDevEui());
+        byte[] eui = Tools.EuiStringToByteArray(body.getDeviceInfo().getDevEui());
         int q = 0;
         for ( int i = 0 ; i < 6 ; i++ ) {
             int v = (((int)eui[i]) < 0)?-eui[i]:eui[i];
@@ -89,33 +86,24 @@ public class LoadBalancerService {
         if ( q == 0 ) {
             if ( this.getNode1State() ) {
                 // push node 1
-                if ( transferPayload(forwarderConfig.getForwarderBalancerNode1Enpoint(),req,body,event) ) {
-                    return true;
-                }
+                return transferPayload(forwarderConfig.getForwarderBalancerNode1Enpoint(), req, body, event);
             } else  if ( this.getNode2State() ) {
                 // push node 2
-                if ( transferPayload(forwarderConfig.getForwarderBalancerNode2Enpoint(),req,body,event) ) {
-                    return true;
-                }
+                return transferPayload(forwarderConfig.getForwarderBalancerNode2Enpoint(), req, body, event);
             } else {
                 return false;
             }
         } else {
             if ( this.getNode2State() ) {
                 // push node 2
-                if ( transferPayload(forwarderConfig.getForwarderBalancerNode2Enpoint(),req,body,event) ) {
-                    return true;
-                }
+                return transferPayload(forwarderConfig.getForwarderBalancerNode2Enpoint(), req, body, event);
             } else  if ( this.getNode1State() ) {
                 // push node 1
-                if ( transferPayload(forwarderConfig.getForwarderBalancerNode1Enpoint(),req,body,event) ) {
-                    return true;
-                }
+                return transferPayload(forwarderConfig.getForwarderBalancerNode1Enpoint(), req, body, event);
             } else {
                 return false;
             }
         }
-        return false;
     }
 
     protected boolean transferPayload(String endpoint, HttpServletRequest req, ChirpstackPayload body, String event ) {
@@ -135,7 +123,7 @@ public class LoadBalancerService {
             headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
             headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
 
-            HttpEntity he = new HttpEntity(body,headers);
+            HttpEntity<ChirpstackPayload> he = new HttpEntity<>(body,headers);
             String url=endpoint+"/capture/?event="+event;
             ResponseEntity<String> responseEntity =
                     restTemplate.exchange(
@@ -147,10 +135,7 @@ public class LoadBalancerService {
             if ( responseEntity.getStatusCode() == HttpStatus.OK ) {
                 log.debug("Frame transferred to "+endpoint);
                 return true;
-            } else if ( responseEntity.getStatusCode() == HttpStatus.NO_CONTENT ) {
-                return true;
-            }
-            return false;
+            } else return responseEntity.getStatusCode() == HttpStatus.NO_CONTENT;
         } catch (HttpClientErrorException e) {
             return false;
         } catch (HttpServerErrorException e) {
