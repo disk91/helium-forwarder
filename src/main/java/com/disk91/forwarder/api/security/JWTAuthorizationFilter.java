@@ -24,28 +24,29 @@ import com.disk91.forwarder.service.UserCacheService;
 import com.disk91.forwarder.service.UserService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.filter.GenericFilterBean;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import java.io.IOException;
 import java.security.Key;
 import java.util.ArrayList;
 
 @Service
 @DependsOn("flywayConfiguration")
-public class JWTAuthorizationFilter extends GenericFilterBean {
+public class JWTAuthorizationFilter extends OncePerRequestFilter {
 
 
     private final Logger log = LoggerFactory.getLogger(this.getClass());
@@ -73,17 +74,17 @@ public class JWTAuthorizationFilter extends GenericFilterBean {
 
     @Override
     @SuppressWarnings("unchecked")
-    public void doFilter(
-        ServletRequest request,
-        ServletResponse response,
-        FilterChain chain) throws IOException, ServletException {
+    public void doFilterInternal(
+        @NonNull HttpServletRequest httpRequest,
+        @NonNull HttpServletResponse response,
+        @NonNull FilterChain chain
+    ) throws IOException, ServletException {
 
         // Make sure the request contains a Bearer or it is not for us
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        String authHeader = httpRequest.getHeader("authorization");
+        String authHeader = httpRequest.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             // refuse authentication
-            chain.doFilter(request, response);
+            chain.doFilter(httpRequest, response);
             return;
         }
 
@@ -127,7 +128,7 @@ public class JWTAuthorizationFilter extends GenericFilterBean {
             UserCacheService.UserCacheElement u = userCacheService.getUserById(user);
             if ( u == null ) {
                 log.error("### jwt attempt with non existing user!!! ");
-                chain.doFilter(request, response);
+                chain.doFilter(httpRequest, response);
                 return;
             }
 
@@ -135,7 +136,7 @@ public class JWTAuthorizationFilter extends GenericFilterBean {
                 for ( String role : roles ) {
                     if ( role.compareToIgnoreCase("ROLE_ADMIN") == 0 ) {
                         log.error("### A simple user try to be identified as an admin !!! ");
-                        chain.doFilter(request, response);
+                        chain.doFilter(httpRequest, response);
                         return;
                     }
                 }
@@ -157,7 +158,7 @@ public class JWTAuthorizationFilter extends GenericFilterBean {
             // sounds like signature problem
             log.warn("Invalid token: "+token);
         }
-        chain.doFilter(request, response);
+        chain.doFilter(httpRequest, response);
 
     }
 
