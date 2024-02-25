@@ -70,46 +70,46 @@ public class HeliumPayload {
       }
      */
 
-    @Schema(description = "APP EUI (random on Hellium) 8 bytes / 16 hexchar", required = false)
+    @Schema(description = "APP EUI (random on Hellium) 8 bytes / 16 hexchar", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String app_eui;
-    @Schema(description = "DEV EUI (random on Hellium) 8 bytes / 16 hexchar", required = false)
+    @Schema(description = "DEV EUI (random on Hellium) 8 bytes / 16 hexchar", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String dev_eui;
-    @Schema(description = "Session DEVADR (random on Hellium) 4 bytes / 8 hexchar ", required = false)
+    @Schema(description = "Session DEVADR (random on Hellium) 4 bytes / 8 hexchar ", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String devaddr;
-    @Schema(description = "Helium device UUID", required = false)
+    @Schema(description = "Helium device UUID", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String id;
-    @Schema(description = "Helium device Name", required = false)
+    @Schema(description = "Helium device Name", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String name;
 
-    @Schema(description = "Payload decoded data", required = false)
+    @Schema(description = "Payload decoded data", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected HntDecoded decoded;
 
-    @Schema(description = "Sequence Id", required = false)
+    @Schema(description = "Sequence Id", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int fcnt;
-    @Schema(description = "Communication port", required = false)
+    @Schema(description = "Communication port", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int port;
-    @Schema(description = "Base64 binary encoded payload", required = false)
+    @Schema(description = "Base64 binary encoded payload", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String payload;
 
-    @Schema(description = "Message timestamp in S", required = false)
+    @Schema(description = "Message timestamp in S", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected long reported_at;
 
-    @Schema(description = "Account DC balance", required = false)
+    @Schema(description = "Account DC balance", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected HntDcBalance dc;
 
-    @Schema(description = "Address to be use to request a downlink", required = false)
+    @Schema(description = "Address to be use to request a downlink", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String downlink_url;
 
-    @Schema(description = "List of Hotspots receiving the information", required = false)
+    @Schema(description = "List of Hotspots receiving the information", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected List<HntHotspot> hotspots;
 
-    @Schema(description = "Associated meta data", required = false)
+    @Schema(description = "Associated meta data", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected HntMetadata metadata;
 
-    @Schema(description = "Message UUID", required = false)
+    @Schema(description = "Message UUID", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String uuid;
 
-    @Schema(description = "Message type", required = false)
+    @Schema(description = "Message type", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String type;
 
 

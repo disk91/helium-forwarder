@@ -37,15 +37,15 @@ public class KeyValue {
     @Override
     public String toString() {
         boolean first = true;
-        String s = "{";
-        Iterator it = entry.entrySet().iterator();
+        StringBuilder s = new StringBuilder("{");
+        Iterator<Map.Entry<String, Object>> it = entry.entrySet().iterator();
         while (it.hasNext()) {
-            if (!first) s += ",";
-            Map.Entry pair = (Map.Entry) it.next();
-            s += "\"" + pair.getKey() + "\" : \"" + pair.getValue() + "\"";
+            if (!first) s.append(",");
+            Map.Entry<String, Object> pair = it.next();
+            s.append("\"").append(pair.getKey()).append("\" : \"").append(pair.getValue()).append("\"");
             first = false;
         }
-        s += "}";
-        return s;
+        s.append("}");
+        return s.toString();
     }
 }

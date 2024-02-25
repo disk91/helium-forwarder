@@ -21,7 +21,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -113,7 +113,7 @@ public class DownlinkService {
 
     protected enum DOWNLINK_TYPE { UNKNOWN, NORMAL, CLEAR };
 
-    private class DelayedDownlink {
+    protected static class DelayedDownlink {
         public DOWNLINK_TYPE type = DOWNLINK_TYPE.UNKNOWN;
         public String devEui;
         public String payloadB64;
@@ -125,12 +125,13 @@ public class DownlinkService {
         public long lastRecheck = 0;
     }
 
-    Boolean downlinkThreadRunning[];
-    Thread downlinkThreads[];
+    Boolean[] downlinkThreadRunning;
+    Thread[] downlinkThreads;
 
-    protected ConcurrentLinkedQueue<DelayedDownlink> asyncDownlink[];
+    protected ConcurrentLinkedQueue[] asyncDownlink;
 
     @PostConstruct
+    @SuppressWarnings("unchecked")
     private void onStartDownlink() {
         if ( forwarderConfig.isForwarderBalancerMode() ) return;
         log.info("Starting DownlinkService");
@@ -151,6 +152,7 @@ public class DownlinkService {
         return (downlinkThreads[t].getState() == Thread.State.TERMINATED);
     }
 
+    @SuppressWarnings("unchecked")
     public synchronized boolean asyncProcessDownlink(HttpServletRequest req, String key, HeliumDownlink d) {
         if ( forwarderConfig.isForwarderBalancerMode() ) return false;
         if (!this.downlinkOpen) return false;
@@ -190,6 +192,7 @@ public class DownlinkService {
         return true;
     }
 
+    @SuppressWarnings("unchecked")
     public synchronized boolean asyncProcessMqttDownlink(HeliumMqttDownlinkPayload d, String deviceId) {
         if ( forwarderConfig.isForwarderBalancerMode() ) return false;
         if (!this.downlinkOpen) return false;
@@ -346,7 +349,7 @@ public class DownlinkService {
             headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
             headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
             headers.add(HttpHeaders.AUTHORIZATION, "Bearer "+forwarderConfig.getChirpstackApiAdminKey());
-            HttpEntity he = new HttpEntity(headers);
+            HttpEntity<String> he = new HttpEntity<String>(headers);
             String url=forwarderConfig.getChirpstackApiBase()+"/api/devices/"+o.devEui+"/queue";
             log.debug("Do down "+o.devEui+" clear ");
             ResponseEntity<String> responseEntity =

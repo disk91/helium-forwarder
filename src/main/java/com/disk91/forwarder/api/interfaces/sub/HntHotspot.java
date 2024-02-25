@@ -41,31 +41,31 @@ public class HntHotspot {
               "status":"success"
             }],
      */
-    @Schema(description = "Base58 encoded hotspot public key", required = false)
+    @Schema(description = "Base58 encoded hotspot public key", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String id;
-    @Schema(description = "Uniq name of the hotspot", required = false)
+    @Schema(description = "Uniq name of the hotspot", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String name;
 
-    @Schema(description = "Communication Channel", required = false)
+    @Schema(description = "Communication Channel", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int channel;
-    @Schema(description = "Reception frequency", required = false)
+    @Schema(description = "Reception frequency", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected double frequency;
-    @Schema(description = "HntHotspot lat", required = false)
+    @Schema(description = "HntHotspot lat", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected double lat;
-    @Schema(description = "HntHotspot lng", required = false)
+    @Schema(description = "HntHotspot lng", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     @JsonProperty("long")
     protected double lng;
 
-    @Schema(description = "Timestamp in S", required = false)
+    @Schema(description = "Timestamp in S", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected long reported_at;
 
-    @Schema(description = "Signal rssi", required = false)
+    @Schema(description = "Signal rssi", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected double rssi;
-    @Schema(description = "Signal snr", required = false)
+    @Schema(description = "Signal snr", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected double snr;
-    @Schema(description = "Spreading factor + bandwidth", required = false)
+    @Schema(description = "Spreading factor + bandwidth", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String spreading;
-    @Schema(description = "Status (undefined)", required = false)
+    @Schema(description = "Status (undefined)", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String status;
 
 

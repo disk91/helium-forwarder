@@ -36,11 +36,11 @@ public class HntLabel {
                }],
      */
 
-    @Schema(description = "HntLabel id", required = false)
+    @Schema(description = "HntLabel id", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String id;
-    @Schema(description = "HntLabel given name", required = false)
+    @Schema(description = "HntLabel given name", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String name;
-    @Schema(description = "HntLabel organization ID", required = false)
+    @Schema(description = "HntLabel organization ID", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String organization_id;
 
     // ---

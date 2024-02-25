@@ -111,7 +111,7 @@ public class MqttManager implements MqttCallback {
         }
 
 
-        if ( _clientId == null || _clientId.length() == 0) {
+        if ( _clientId == null || _clientId.isEmpty()) {
             clientId = RandomString.getRandomString(6);
         } else clientId = _clientId;
         this.url = _scheme+_server+":"+_port;
@@ -120,7 +120,7 @@ public class MqttManager implements MqttCallback {
         this.downTopic = _downTopic;
         this.qos = _qos;
 
-        if (this.downTopic != null && this.downTopic.length() > 0 ) {
+        if (this.downTopic != null && !this.downTopic.isEmpty()) {
             // if we don't have {{device_id}} in the
             boolean haveDeviceId = _downTopic.contains("/{{device_id}}/")
                 || _downTopic.startsWith("{{device_id}}/")
@@ -158,8 +158,8 @@ public class MqttManager implements MqttCallback {
             this.mqttClient = new MqttClient(url, clientId, persistence);
             this.connectionOptions.setCleanSession(true);
             this.connectionOptions.setAutomaticReconnect(false);
-            if ( _user.length() > 0 ) this.connectionOptions.setUserName(_user);
-            if ( _password.length() > 0 ) this.connectionOptions.setPassword(_password.toCharArray());
+            if (!_user.isEmpty()) this.connectionOptions.setUserName(_user);
+            if (!_password.isEmpty()) this.connectionOptions.setPassword(_password.toCharArray());
             this.connectionOptions.setConnectionTimeout(120);
             this.mqttClient.connect(this.connectionOptions);
             this.mqttClient.setCallback(this);

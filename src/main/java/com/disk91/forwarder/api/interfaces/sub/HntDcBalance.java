@@ -28,10 +28,10 @@ public class HntDcBalance {
 
     /* {"balance":7630,"nonce":1}, */
 
-    @Schema(description = "Balance of DC portfolio", required = false)
+    @Schema(description = "Balance of DC portfolio", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected long balance;
 
-    @Schema(description = "Unclear what it is", required = false)
+    @Schema(description = "Unclear what it is", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int nonce;
 
 

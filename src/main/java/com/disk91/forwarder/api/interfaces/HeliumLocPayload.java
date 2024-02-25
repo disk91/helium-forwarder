@@ -18,28 +18,28 @@ public class HeliumLocPayload {
           "source": "GEO_RESOLVER_GNSS",
         }
     */
-    @Schema(description = "Device eui", required = false)
+    @Schema(description = "Device eui", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String dev_eui;
 
-    @Schema(description = "Organization (Tenant) id", required = false)
+    @Schema(description = "Organization (Tenant) id", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String organization_id;
 
-    @Schema(description = "Application / Join eui", required = false)
+    @Schema(description = "Application / Join eui", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String app_eui;
 
-    @Schema(description = "Device name", required = false)
+    @Schema(description = "Device name", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String name;
 
-    @Schema(description = "Device latitude", required = false)
+    @Schema(description = "Device latitude", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected double latitude;
 
-    @Schema(description = "Device longitude", required = false)
+    @Schema(description = "Device longitude", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected double longitude;
 
-    @Schema(description = "Device accuracy in meters", required = false)
+    @Schema(description = "Device accuracy in meters", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int accuracy;
 
-    @Schema(description = "Location source, as given by the external computation engine", required = false)
+    @Schema(description = "Location source, as given by the external computation engine", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String source;
 
     // ---

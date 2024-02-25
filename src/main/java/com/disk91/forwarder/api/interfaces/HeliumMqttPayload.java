@@ -71,19 +71,19 @@ public class HeliumMqttPayload extends HeliumPayload {
 
      */
 
-    @Schema(description = "Size in byte of the payload", required = false)
+    @Schema(description = "Size in byte of the payload", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int payload_size;
 
-    @Schema(description = "Whole packet data", required = false)
+    @Schema(description = "Whole packet data", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String raw_packet;
 
-    @Schema(description = "Is this packet a replay", required = false)
+    @Schema(description = "Is this packet a replay", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected boolean replay;
 
-    @Schema(description = "Type of packet (uplink ...)", required = false)
+    @Schema(description = "Type of packet (uplink ...)", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String type;
 
-    @Schema(description = "UUID", required = false)
+    @Schema(description = "UUID", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String uuid;
 
     // ---

@@ -46,22 +46,22 @@ public class HntMetadata {
         },
      */
 
-    @Schema(description = "List of labels", required = false)
+    @Schema(description = "List of labels", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected List<HntLabel> labels;
 
-    @Schema(description = "Organization Id", required = false)
+    @Schema(description = "Organization Id", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String organization_id;
 
-    @Schema(description = "Multi buy configuration", required = false)
+    @Schema(description = "Multi buy configuration", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int multi_buy;
 
-    @Schema(description = "Rx Delay", required = false)
+    @Schema(description = "Rx Delay", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int rx_delay;
 
-    @Schema(description = "Rx Delay currently negociated with device", required = false)
+    @Schema(description = "Rx Delay currently negociated with device", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int rx_delay_actual;
 
-    @Schema(description = "Status of rx delay negotiation with device", required = false)
+    @Schema(description = "Status of rx delay negotiation with device", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String rx_delay_state;
 
 

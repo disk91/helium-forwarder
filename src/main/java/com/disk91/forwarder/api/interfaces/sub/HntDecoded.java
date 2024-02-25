@@ -38,10 +38,10 @@ public class HntDecoded {
         },
 
     */
-    @Schema(description = "Decoded payload", required = false)
+    @Schema(description = "Decoded payload", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected KeyValue payload;
 
-    @Schema(description = "Decoding status", required = false)
+    @Schema(description = "Decoding status", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String status;
 
     // ---

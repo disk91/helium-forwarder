@@ -27,6 +27,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -48,32 +49,31 @@ public class WebSecurityProfile {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
-        http.sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and().cors(cors -> cors.disable()).csrf(csrf -> csrf.disable())
-                .addFilterAfter(jwtAuthorizationFilter, BasicAuthenticationFilter.class)
-                .authenticationProvider(jwtAuthenticationProvider)
-                .authorizeHttpRequests((authz) -> authz
-                        // Allow all OPTIONS
-                        .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Allow internal api
-                        .antMatchers("/").permitAll()
-                        .antMatchers("/internal/3.0/exit").permitAll()
-                        .antMatchers("/internal/3.0/health").permitAll()
-                        // user management
-                        .antMatchers("/forwarder/1.0/sign/**").permitAll()
-                        // capture endpoint
-                        .antMatchers("/capture/**").permitAll()
-                        .antMatchers("/forwarder/1.0/downlink/**").permitAll()
-                        // public messages
-                        // swagger documentation
-                        .antMatchers("/swagger-doc/**").permitAll()
-                        .antMatchers("/v3/api-docs/**").permitAll()
-                        .antMatchers("/webjars/**").permitAll()
-                        // prometheus
-                        .antMatchers("/actuator/**").permitAll()
-                        .anyRequest().authenticated())
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(AbstractHttpConfigurer::disable)
+            .addFilterAfter(jwtAuthorizationFilter, BasicAuthenticationFilter.class)
+            .authenticationProvider(jwtAuthenticationProvider)
+            .authorizeHttpRequests((authz) -> authz
+                    // Allow all OPTIONS
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    // Allow internal api
+                    .requestMatchers("/").permitAll()
+                    .requestMatchers("/internal/3.0/exit").permitAll()
+                    .requestMatchers("/internal/3.0/health").permitAll()
+                    // user management
+                    .requestMatchers("/forwarder/1.0/sign/**").permitAll()
+                    // capture endpoint
+                    .requestMatchers("/capture/**").permitAll()
+                    .requestMatchers("/forwarder/1.0/downlink/**").permitAll()
+                    // public messages
+                    // swagger documentation
+                    .requestMatchers("/swagger-doc/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**").permitAll()
+                    .requestMatchers("/webjars/**").permitAll()
+                    // prometheus
+                    .requestMatchers("/actuator/**").permitAll()
+                    .anyRequest().authenticated())
         ;
         return http.build();
     }

@@ -33,11 +33,11 @@ public class HeliumDownlink {
             "confirmed": false
         }
      */
-    @Schema(description = "Base64 encoded payload", required = false)
+    @Schema(description = "Base64 encoded payload", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected String payload_raw;
-    @Schema(description = "Associated port", required = false)
+    @Schema(description = "Associated port",requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected int port;
-    @Schema(description = "Is a device ack required for this downlink", required = false)
+    @Schema(description = "Is a device ack required for this downlink", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     protected boolean confirmed;
 
     // Generated
