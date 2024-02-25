@@ -80,42 +80,42 @@ public class PrometeusService {
     // =============================================================
     // Prometheus interface
 
-    protected Supplier<Number> getUplinkQueueSize() {
+    private Supplier<Number> getUplinkQueueSize() {
         return () -> uplinkQueueSize;
     }
 
-    protected Supplier<Number> getTotalUplinkRetry() {
+    private Supplier<Number> getTotalUplinkRetry() {
         return () -> totalUplinkRetry;
     }
 
-    protected Supplier<Number> getTotalUplinkFailure() {
+    private Supplier<Number> getTotalUplinkFailure() {
         return () -> totalUplinkFailure;
     }
 
-    protected Supplier<Number> getDownlinkCacheSize() {
+    private Supplier<Number> getDownlinkCacheSize() {
         return () -> downlinkCacheSize;
     }
 
-    protected Supplier<Number> getDownlinkQueueSize() {
+    private Supplier<Number> getDownlinkQueueSize() {
         return () -> downlinkQueueSize;
     }
 
-    protected Supplier<Number> getTotalDownlinkRetry() {
+    private Supplier<Number> getTotalDownlinkRetry() {
         return () -> totalDownlinkRetry;
     }
-    protected Supplier<Number> getTotalDownlinkFailure() {
+    private Supplier<Number> getTotalDownlinkFailure() {
         return () -> totalDownlinkFailure;
     }
 
-    protected Supplier<Number> getHeliumApiTotalTimeMs() {
+    private Supplier<Number> getHeliumApiTotalTimeMs() {
         return ()->apiHeliumTimeMs;
     }
 
-    protected Supplier<Number> getHeliumApiTotal() {
+    private Supplier<Number> getHeliumApiTotal() {
         return ()->apiHeliumTotal;
     }
 
-    protected Supplier<Number> getHeliumApiTotalError() {
+    private Supplier<Number> getHeliumApiTotalError() {
         return ()->apiHeliumErrors;
     }
 
