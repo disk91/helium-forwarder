@@ -33,7 +33,7 @@ dependencies {
 	implementation group: 'io.micrometer', name: 'micrometer-registry-prometheus', version: '1.12.1'
 	implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.2'
 	implementation group: 'org.springdoc', name: 'springdoc-openapi-ui', version: '1.6.15'
-	implementation group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.12.3'
+	implementation group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.12.5'
 	implementation group: 'org.flywaydb', name: 'flyway-core', version: '10.4.1'
     implementation group: 'io.grpc', name: 'grpc-okhttp', version: '1.60.1'
     implementation group: 'io.grpc', name: 'grpc-netty', version:'1.60.1'
@@ -43,8 +43,8 @@ dependencies {
     implementation group: 'com.uber', name: 'h3', version:'4.1.1'
 
 	runtimeOnly group: 'org.postgresql', name: 'postgresql', version: '42.7.2'
-    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.12.3'
-    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.12.3'
+    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.12.5'
+    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.12.5'
     runtimeOnly group: 'org.flywaydb', name: 'flyway-database-postgresql', version: '10.4.1'
 
 }
