@@ -75,12 +75,12 @@ public class CaptureApi {
             HttpServletRequest request,
             @Parameter(required = true, name = "event", description = "Get the type of event ( impacts body structure )")
             @RequestParam("event") String event,
-            @RequestBody(required = true) ChirpstackPayload /* String  smessage */ message
+            @RequestBody(required = true) /*ChirpstackPayload */ String  smessage // * / message
     ) {
 
         log.debug("Frame received, type "+event);
 
-        /* -- for tracing input when adding new event type * /
+        /* -- for tracing input when adding new event type */
         log.info(smessage);
         ChirpstackPayload message;
         try {
@@ -90,7 +90,7 @@ public class CaptureApi {
             log.error("Error in parsing payload for "+smessage);
             message = new ChirpstackPayload();
         }
-        */
+        /**/
 
 
         if ( forwarderConfig.isForwarderBalancerMode() ) {
