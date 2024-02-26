@@ -15,11 +15,8 @@ public class JWTAuthenticationProvider implements AuthenticationProvider {
     @Override
     public Authentication authenticate(Authentication authentication)
             throws AuthenticationException {
-
         // No Authentication management with an url
         return null;
-
-
     }
 
     @Override

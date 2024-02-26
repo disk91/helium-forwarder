@@ -81,8 +81,9 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
     ) throws IOException, ServletException {
 
         // Make sure the request contains a Bearer or it is not for us
-        String authHeader = httpRequest.getHeader("Authorization");
+        String authHeader = httpRequest.getHeader("authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.warn("### non authenticated request");
             // refuse authentication
             chain.doFilter(httpRequest, response);
             return;
@@ -103,9 +104,15 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
                                 log.error("### Bearer is signed with invalid algo !!! ");
                                 return null;
                             }
-                            if (user == null) return null;
+                            if (user == null) {
+                                log.error("### User field is null !!!");
+                                return null;
+                            }
                             UserCacheService.UserCacheElement u = userCacheService.getUserById(user);
-                            if ( u == null ) return null;
+                            if ( u == null ) {
+                                log.error("### User is not existing");
+                                return null;
+                            }
                             return userService.generateKeyForUser(u.heliumUser);
                         }
                         log.error("Invalid type of headers");
