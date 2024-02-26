@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.2.1'
+    id 'org.springframework.boot' version '3.2.3'
     id 'io.spring.dependency-management' version '1.1.4'
 }
 
@@ -19,7 +19,12 @@ repositories {
 	}
 }
 
+bootJar {
+    launchScript()
+}
+
 dependencies {
+
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -38,6 +43,7 @@ dependencies {
     implementation group: 'io.grpc', name: 'grpc-netty', version:'1.60.1'
     implementation group: 'io.grpc', name: 'grpc-protobuf', version:'1.60.1'
     implementation group: 'io.grpc', name: 'grpc-stub', version:'1.60.1'
+    implementation group: 'com.google.protobuf', name: 'protobuf-java-util', version: '3.25.1'
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk18on', version: '1.77'
     implementation group: 'com.uber', name: 'h3', version:'4.1.1'
 
