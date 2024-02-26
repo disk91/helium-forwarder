@@ -3,6 +3,7 @@ package com.disk91.forwarder.api;
 import com.disk91.forwarder.ForwarderConfig;
 import com.disk91.forwarder.api.interfaces.ActionResult;
 import com.disk91.forwarder.api.interfaces.ChirpstackPayload;
+import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.service.LoadBalancerService;
 import com.disk91.forwarder.service.PayloadService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-@Tag( name = "capture api", description = "capture message from chripstack" )
+@Tag( name = "capture api & transform", description = "capture message from chripstack" )
 @CrossOrigin
 @RequestMapping(value = "/capture")
 @RestController
@@ -129,6 +130,53 @@ public class CaptureApi {
         }
 
     }
+
+
+    @Operation(summary = "Transform a Chirpstack payload into Helium Payload",
+        description = "Transform a Chirpstack payload into Helium Payload, enriched with location, " +
+            "fair-use rule : identify yourself with a personal user-agent, max rate 1 req / min avg",
+        responses = {
+            @ApiResponse(responseCode = "200", description= "Success", content = @Content(schema = @Schema(implementation = HeliumPayload.class))),
+            @ApiResponse(responseCode = "400", description= "Bad Request", content = @Content(schema = @Schema(implementation = ActionResult.class))),
+        }
+    )
+    @RequestMapping(value="/transform/",
+        produces = MediaType.APPLICATION_JSON_VALUE,
+        method= RequestMethod.POST)
+    public ResponseEntity<?> postChiprstacToHelium(
+        HttpServletRequest request,
+        @RequestBody(required = true) ChirpstackPayload message
+    ) {
+        try {
+            HeliumPayload p = payloadService.getHeliumPayload(message);
+            return new ResponseEntity<>(p, HttpStatus.OK);
+        } catch ( Exception x ) {
+            return new ResponseEntity<>(ActionResult.BADREQUEST(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Operation(summary = "Enrich a Chirpstack payload with Gateway location",
+        description = "Enrich a Chirpstack payload into Helium Payload, fair-use rule : identify yourself with a personal user-agent, max rate 1 req / min avg",
+        responses = {
+            @ApiResponse(responseCode = "200", description= "Success", content = @Content(schema = @Schema(implementation = ChirpstackPayload.class))),
+            @ApiResponse(responseCode = "400", description= "Bad Request", content = @Content(schema = @Schema(implementation = ActionResult.class))),
+        }
+    )
+    @RequestMapping(value="/enrich/",
+        produces = MediaType.APPLICATION_JSON_VALUE,
+        method= RequestMethod.POST)
+    public ResponseEntity<?> postChiprstacEnrichement(
+        HttpServletRequest request,
+        @RequestBody(required = true) ChirpstackPayload message
+    ) {
+        try {
+            ChirpstackPayload p = payloadService.enrichPayload(message);
+            return new ResponseEntity<>(p, HttpStatus.OK);
+        } catch ( Exception x ) {
+            return new ResponseEntity<>(ActionResult.BADREQUEST(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
 
 
 }

@@ -22,7 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @Tag( name = "payload transform api", description = "tansform payload" )
 @CrossOrigin
-@RequestMapping(value = "/capture")
+@RequestMapping(value = "/transform")
 @RestController
 public class TransformApi {
 
