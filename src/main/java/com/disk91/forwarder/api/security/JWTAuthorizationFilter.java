@@ -80,6 +80,7 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
         @NonNull FilterChain chain
     ) throws IOException, ServletException {
 
+        log.info("### Req "+httpRequest.getRequestURI());
         // Make sure the request contains a Bearer or it is not for us
         String authHeader = httpRequest.getHeader("authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
