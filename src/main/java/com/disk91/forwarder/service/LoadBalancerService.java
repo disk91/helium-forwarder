@@ -110,38 +110,7 @@ public class LoadBalancerService {
 
     protected boolean transferPayload(String endpoint, HttpServletRequest req, ChirpstackPayload body, String event ) {
 
-        RestTemplate restTemplate = new RestTemplate();
         try {
-            /*
-            HttpHeaders headers = new HttpHeaders();
-            Enumeration<String> ss = req.getHeaderNames();
-            while (ss.hasMoreElements()) {
-                String s = ss.nextElement();
-                if (    s.compareToIgnoreCase(HttpHeaders.USER_AGENT) != 0
-                    &&  s.compareToIgnoreCase(HttpHeaders.CONTENT_TYPE) != 0
-                ) {
-                    headers.add(s, req.getHeader(s));
-                }
-            }
-            headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
-            headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
-
-            ObjectMapper mapper = new ObjectMapper();
-            String sBody = mapper.writeValueAsString(body);
-            log.info("### > "+sBody);
-
-            /*
-            // HttpEntity<ChirpstackPayload> he = new HttpEntity<>(body,headers);
-            HttpEntity<String> he = new HttpEntity<>(sBody,headers);
-            String url=endpoint+"/capture/?event="+event;
-            ResponseEntity<String> responseEntity =
-                    restTemplate.exchange(
-                            url,
-                            HttpMethod.POST,
-                            he,
-                            String.class
-                    );
-*/
             RestClient restClient = RestClient.builder()
                 .baseUrl(endpoint+"/capture/?event="+event)
                 .defaultHeaders( httpHeaders -> {
@@ -182,6 +151,5 @@ public class LoadBalancerService {
         }
 
     }
-
 
 }
