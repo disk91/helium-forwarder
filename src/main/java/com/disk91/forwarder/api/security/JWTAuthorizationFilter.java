@@ -104,12 +104,12 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
                                 return null;
                             }
                             if (user == null) {
-                                log.error("### User field is null !!!");
+                                log.debug("### User field is null !!!");
                                 return null;
                             }
                             UserCacheService.UserCacheElement u = userCacheService.getUserById(user);
                             if ( u == null ) {
-                                log.error("### User is not existing");
+                                log.debug("### User is not existing");
                                 return null;
                             }
                             return userService.generateKeyForUser(u.heliumUser);
