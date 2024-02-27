@@ -126,6 +126,7 @@ public class LoadBalancerService {
 
             ObjectMapper mapper = new ObjectMapper();
             String sBody = mapper.writeValueAsString(body);
+            log.info("### > "+sBody);
 
             // HttpEntity<ChirpstackPayload> he = new HttpEntity<>(body,headers);
             HttpEntity<String> he = new HttpEntity<>(sBody,headers);
