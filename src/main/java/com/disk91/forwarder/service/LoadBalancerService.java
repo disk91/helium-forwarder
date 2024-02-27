@@ -150,9 +150,9 @@ public class LoadBalancerService {
                         String s = _ss.nextElement();
                         if (    s.compareToIgnoreCase(HttpHeaders.USER_AGENT) != 0
                             &&  s.compareToIgnoreCase(HttpHeaders.CONTENT_TYPE) != 0
+                            && s.compareToIgnoreCase(HttpHeaders.CONTENT_LENGTH) != 0
                         ) {
                             httpHeaders.set(s, req.getHeader(s));
-                            log.info("Head: "+s+" / "+ req.getHeader(s));
                         }
                     }
                     httpHeaders.set(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
