@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -111,6 +112,7 @@ public class LoadBalancerService {
 
         RestTemplate restTemplate = new RestTemplate();
         try {
+            /*
             HttpHeaders headers = new HttpHeaders();
             Enumeration<String> ss = req.getHeaderNames();
             while (ss.hasMoreElements()) {
@@ -128,6 +130,7 @@ public class LoadBalancerService {
             String sBody = mapper.writeValueAsString(body);
             log.info("### > "+sBody);
 
+            /*
             // HttpEntity<ChirpstackPayload> he = new HttpEntity<>(body,headers);
             HttpEntity<String> he = new HttpEntity<>(sBody,headers);
             String url=endpoint+"/capture/?event="+event;
@@ -138,6 +141,30 @@ public class LoadBalancerService {
                             he,
                             String.class
                     );
+*/
+            RestClient restClient = RestClient.builder()
+                .baseUrl(endpoint+"/capture/?event="+event)
+                .defaultHeaders( httpHeaders -> {
+                    Enumeration<String> _ss = req.getHeaderNames();
+                    while (_ss.hasMoreElements()) {
+                        String s = _ss.nextElement();
+                        if (    s.compareToIgnoreCase(HttpHeaders.USER_AGENT) != 0
+                            &&  s.compareToIgnoreCase(HttpHeaders.CONTENT_TYPE) != 0
+                        ) {
+                            httpHeaders.set(s, req.getHeader(s));
+                        }
+                    }
+                    httpHeaders.set(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
+                    httpHeaders.set(HttpHeaders.CONTENT_TYPE, "application/json");
+                })
+                .build();
+
+            ResponseEntity<Void> responseEntity = restClient.post()
+                .accept(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .toBodilessEntity();
+
             if ( responseEntity.getStatusCode() == HttpStatus.OK ) {
                 log.debug("Frame transferred to "+endpoint);
                 return true;
