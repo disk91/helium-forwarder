@@ -137,10 +137,13 @@ public class LoadBalancerService {
                 return true;
             } else return responseEntity.getStatusCode() == HttpStatus.NO_CONTENT;
         } catch (HttpClientErrorException e) {
+            log.info("HttpClientErrorException "+e.getMessage());
             return false;
         } catch (HttpServerErrorException e) {
+            log.info("HttpServerErrorException "+e.getMessage());
             return false;
-        } catch (Exception x ) {
+        } catch (Exception e ) {
+            log.info("Exception "+e.getMessage());
             return false;
         }
 
