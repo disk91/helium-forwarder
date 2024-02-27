@@ -59,13 +59,18 @@ public class ChirpstackPayload {
                     "gateway_lat" : "45.80...",
                     "gateway_long" : "3.09...",
                     "gateway_name" : "mythical-xxx..."
+                    "gateway_id":"11o8R9inbpc...3XA",
+                    "lat": 0.0,
+                    "lon": 0.0,
                 },
                 "crcStatus":"CRC_OK",
             },
             {
                 "gatewayId":"3c408850a5b4f27c",
                 "uplinkId":11888,
-                "time":"2023-05-29T19:50:10+00:00",
+                "time":null,
+                "gwTime":"2024-02-27T18:07:11+00:00",
+                "nsTime":"2024-02-27T18:07:11.115026956+00:00",
                 "rssi":-22,
                 "snr":8.0,
                 "context":"yIKGwQ==",
@@ -81,10 +86,11 @@ public class ChirpstackPayload {
                 "lora":{
                     "bandwidth":125000,
                     "spreadingFactor":9,
-                    "codeRate":"CR_4_5"
+                    "codeRate":"CR_4_5",
+                    "polarizationInversion":false
                 }
             }
-        }
+        },
     }
 
     // when some error
