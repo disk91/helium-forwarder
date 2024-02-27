@@ -2,6 +2,7 @@ package com.disk91.forwarder.service;
 
 import com.disk91.forwarder.ForwarderConfig;
 import com.disk91.forwarder.api.interfaces.ChirpstackPayload;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.ingeniousthings.tools.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,7 +124,11 @@ public class LoadBalancerService {
             headers.add(HttpHeaders.USER_AGENT,"disk91_forwarder/1.0");
             headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
 
-            HttpEntity<ChirpstackPayload> he = new HttpEntity<>(body,headers);
+            ObjectMapper mapper = new ObjectMapper();
+            String sBody = mapper.writeValueAsString(body);
+
+            // HttpEntity<ChirpstackPayload> he = new HttpEntity<>(body,headers);
+            HttpEntity<String> he = new HttpEntity<>(sBody,headers);
             String url=endpoint+"/capture/?event="+event;
             ResponseEntity<String> responseEntity =
                     restTemplate.exchange(
