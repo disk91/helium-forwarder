@@ -160,6 +160,7 @@ public class PayloadService {
 
         String type = req.getHeader("htype");
         if ( type == null ) return false; // not a valid payload
+        type = type.trim(); // some user do it ...
         if (
                 type.compareToIgnoreCase("http") == 0
             ||  type.compareToIgnoreCase("tago") == 0
@@ -168,20 +169,28 @@ public class PayloadService {
             // basically HTTP integration
             dc.type = INTEGRATION_TYPE.HTTP;
             String v = req.getHeader("hverb");
+            if ( v!=null ) v = v.trim();
+            else v="unknown";   // defaut behavior
             if ( v.compareToIgnoreCase("post") == 0 ) dc.verb = INTEGRATION_VERB.POST;
             else if ( v.compareToIgnoreCase("get") == 0 ) dc.verb = INTEGRATION_VERB.GET;
             else if ( v.compareToIgnoreCase("put") == 0 ) dc.verb = INTEGRATION_VERB.PUT;
             dc.endpoint = req.getHeader("hendpoint");
             dc.locendpoint = req.getHeader("hlocendpoint");
             dc.urlparam = req.getHeader("hurlparam");
+            if ( dc.endpoint != null ) dc.endpoint = dc.endpoint.trim(); else return false;
+            if ( dc.locendpoint != null ) dc.locendpoint = dc.locendpoint.trim();
+            if ( dc.urlparam != null ) dc.urlparam = dc.urlparam.trim();
             String headers = req.getHeader("hheaders");
-            try {
-                ObjectMapper mapper = new ObjectMapper();
-                dc.headers = mapper.readValue(headers, KeyValue.class);
-            } catch (JsonProcessingException e) {
-                log.error("Error in parsing Headers for "+c.getDeviceInfo().getDevEui());
-                dc.headers = new KeyValue();
-            }
+            if ( headers != null ) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    dc.headers = mapper.readValue(headers, KeyValue.class);
+                } catch (JsonProcessingException e) {
+                    log.error("Error in parsing Headers for " + c.getDeviceInfo().getDevEui());
+                    dc.headers = new KeyValue();
+                }
+            } else dc.headers = new KeyValue();
+
             // check
             if ( dc.endpoint.length() < 5 ) return false;
             if ( dc.locendpoint == null || dc.locendpoint.length() < 5 ) {
@@ -197,13 +206,17 @@ public class PayloadService {
             log.debug("Got a MQTT Integration");
             dc.type = INTEGRATION_TYPE.MQTT;
             dc.topicUp = req.getHeader("huptopic");
+            if ( dc.topicUp != null ) dc.topicUp = dc.topicUp.trim(); else return false;
             if ( req.getHeader("hloctopic") != null ) {
                 dc.topicLoc = req.getHeader("hloctopic");
             } else {
                 dc.topicLoc = dc.topicUp+"/location";
             }
             dc.topicDown = req.getHeader("hdntopic");
+            if ( dc.topicDown != null ) dc.topicDown = dc.topicDown.trim();
+
             String sQos = req.getHeader("hqos");
+            if ( sQos != null ) sQos = sQos.trim();
             dc.qos = -1;
             if ( sQos != null && sQos.length() == 1 ) {
                 try {
@@ -213,10 +226,11 @@ public class PayloadService {
                 };
             }
             dc.endpoint = req.getHeader("hendpoint");
+            if ( dc.endpoint != null ) dc.endpoint = dc.endpoint.trim(); else return false;
             if ( dc.endpoint.length() < 5 ) return false;
             if ( ! dc.endpoint.startsWith("mqtt") ) return false;
             if ( dc.topicUp.length() < 3 ) return false;
-            if ( dc.topicDown.length() > 0 && dc.topicDown.length() < 3 ) return false;
+            if (!dc.topicDown.isEmpty() && dc.topicDown.length() < 3 ) return false;
         } else {
             // unsupported type
             log.warn("Received unsupported type ("+type.substring(0,Math.min(type.length(), 6))+")");
