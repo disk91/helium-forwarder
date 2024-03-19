@@ -135,6 +135,13 @@ public class PayloadService {
 
     }
 
+    // Make sure a topic contains only a-Z A-Z 0-9 -_{} . and / characters
+    public boolean isTopicFormatAcceptable(String topic) {
+        boolean r = topic.matches("^[a-zA-Z0-9_{}./\\-]+$");
+        if ( !r ) log.warn("Got an invalid topic ("+topic+")");
+        return r;
+    }
+
     public boolean asyncProcessEvent(HttpServletRequest req, ChirpstackPayload c, String evtType) {
         if ( forwarderConfig.isForwarderBalancerMode() ) return false;
         if (!this.uplinkOpen) return false;
@@ -207,14 +214,19 @@ public class PayloadService {
             dc.type = INTEGRATION_TYPE.MQTT;
             dc.topicUp = req.getHeader("huptopic");
             if ( dc.topicUp != null ) dc.topicUp = dc.topicUp.trim(); else return false;
+            if ( !isTopicFormatAcceptable(dc.topicUp) ) return false;
+
             if ( req.getHeader("hloctopic") != null ) {
                 dc.topicLoc = req.getHeader("hloctopic");
             } else {
                 dc.topicLoc = dc.topicUp+"/location";
             }
+            if ( !isTopicFormatAcceptable(dc.topicLoc) ) return false;
+
             dc.topicDown = req.getHeader("hdntopic");
             if ( dc.topicDown != null ) dc.topicDown = dc.topicDown.trim();
             else dc.topicDown = "";
+            if ( !isTopicFormatAcceptable(dc.topicDown) ) return false;
 
             String sQos = req.getHeader("hqos");
             if ( sQos != null ) sQos = sQos.trim();
