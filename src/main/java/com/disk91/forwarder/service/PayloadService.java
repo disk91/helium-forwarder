@@ -214,6 +214,7 @@ public class PayloadService {
             }
             dc.topicDown = req.getHeader("hdntopic");
             if ( dc.topicDown != null ) dc.topicDown = dc.topicDown.trim();
+            else dc.topicDown = "";
 
             String sQos = req.getHeader("hqos");
             if ( sQos != null ) sQos = sQos.trim();
@@ -230,7 +231,7 @@ public class PayloadService {
             if ( dc.endpoint.length() < 5 ) return false;
             if ( ! dc.endpoint.startsWith("mqtt") ) return false;
             if ( dc.topicUp.length() < 3 ) return false;
-            if (!dc.topicDown.isEmpty() && dc.topicDown.length() < 3 ) return false;
+            if ( ! dc.topicDown.isEmpty() && dc.topicDown.length() < 3 ) return false;
         } else {
             // unsupported type
             log.warn("Received unsupported type ("+type.substring(0,Math.min(type.length(), 6))+")");
