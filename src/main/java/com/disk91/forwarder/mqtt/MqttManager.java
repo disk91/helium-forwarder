@@ -160,7 +160,7 @@ public class MqttManager implements MqttCallback {
             this.connectionOptions.setAutomaticReconnect(false);
             if (!_user.isEmpty()) this.connectionOptions.setUserName(_user);
             if (!_password.isEmpty()) this.connectionOptions.setPassword(_password.toCharArray());
-            this.connectionOptions.setConnectionTimeout(120);
+            this.connectionOptions.setConnectionTimeout(5);
             this.mqttClient.connect(this.connectionOptions);
             this.mqttClient.setCallback(this);
             if ( this.subscribeTopic != null ) {
@@ -170,7 +170,7 @@ public class MqttManager implements MqttCallback {
             this.initSuccess = true;
             this.connected = true;
         } catch (MqttException me) {
-            log.error("MQTT ERROR", me);
+            log.error("MQTT ERROR ("+me.getMessage()+") on "+this.url);
         }
     }
 
@@ -203,6 +203,7 @@ public class MqttManager implements MqttCallback {
 
 
     public boolean publishMessage( HeliumPayload message ) {
+        if ( ! this.initSuccess || ! this.connected ) return false;
         try {
             // Add the deveui if not yet know in list for downlink control
             this.deviceEuis.computeIfAbsent(message.getDev_eui().toLowerCase(), k -> message.getDev_eui().toLowerCase());
@@ -234,6 +235,7 @@ public class MqttManager implements MqttCallback {
     }
 
     public boolean publishLocation( HeliumLocPayload message ) {
+        if ( ! this.initSuccess || ! this.connected ) return false;
         try {
             // checks
             if ( message == null ) return true; // reject and not retry
@@ -245,7 +247,7 @@ public class MqttManager implements MqttCallback {
                 .replace("{{app_eui}}", message.getApp_eui())
                 .replace("{{organization_id}}", message.getOrganization_id() );
 
-            log.debug("Publish loc on topic ("+_locTopic+") from ("+locTopic+")");
+            log.info("Publish loc on topic ("+_locTopic+") from ("+locTopic+")");
 
             int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
             try {
