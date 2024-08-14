@@ -1,5 +1,6 @@
 package com.disk91.forwarder.mqtt;
 
+import com.disk91.forwarder.api.interfaces.ChirpstackPayload;
 import com.disk91.forwarder.api.interfaces.HeliumLocPayload;
 import com.disk91.forwarder.api.interfaces.HeliumMqttDownlinkPayload;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
@@ -33,6 +34,7 @@ public class MqttManager implements MqttCallback {
     private int qos;
     private String upTopic;
     private String locTopic;
+    private String ackTopic;
     private String downTopic;
     private String subscribeTopic;
 
@@ -56,6 +58,7 @@ public class MqttManager implements MqttCallback {
             String _clientId,
             String _upTopic,
             String _locTopic,
+            String _ackTopic,
             String _downTopic,
             int _qos,
             DownlinkService _downlinkService
@@ -117,6 +120,7 @@ public class MqttManager implements MqttCallback {
         this.url = _scheme+_server+":"+_port;
         this.upTopic = _upTopic;
         this.locTopic = _locTopic;
+        this.ackTopic = _ackTopic;
         this.downTopic = _downTopic;
         this.qos = _qos;
 
@@ -227,6 +231,37 @@ public class MqttManager implements MqttCallback {
                 return true;
             } catch (JsonProcessingException x) {
                 log.error("MQTT Up Parse exception for "+message.getDev_eui());
+            }
+        } catch (MqttException me) {
+            log.error("MQTT Up Publish Error", me);
+        }
+        return false;
+    }
+
+    public boolean publishAck(ChirpstackPayload message) {
+        if ( ! this.initSuccess || ! this.connected ) return false;
+        try {
+            // checks
+            if ( message == null ) return true; // reject and not retry
+            String _ackTopic = ackTopic.replace("{{device_id}}", message.getDeviceInfo().getDevEui() )
+                    .replace("{{device_name}}", message.getDeviceInfo().getDeviceName() )
+                    .replace("{{device_eui}}", message.getDeviceInfo().getDevEui() )
+                    .replace("{{app_eui}}", "0000000000000000" )
+                    .replace("{{organization_id}}", message.getDeviceInfo().getTenantId() );
+
+            log.debug("Publish up on topic ("+_ackTopic+") from ("+ackTopic+")");
+
+
+            int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String _message = mapper.writeValueAsString(message);
+                MqttMessage mqttmessage = new MqttMessage(_message.getBytes());
+                mqttmessage.setQos(_qos);
+                this.mqttClient.publish(_ackTopic, mqttmessage);
+                return true;
+            } catch (JsonProcessingException x) {
+                log.error("MQTT Up Parse exception for "+message.getDeviceInfo().getDevEui());
             }
         } catch (MqttException me) {
             log.error("MQTT Up Publish Error", me);
