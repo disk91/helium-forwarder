@@ -296,7 +296,7 @@ public class MqttManager implements MqttCallback {
                     .replace("{{app_eui}}", message.getApp_eui())
                     .replace("{{organization_id}}", message.getMetadata().getOrganization_id());
 
-            log.debug("Publish join on topic ({}) from ({})", _joinTopic, ackTopic);
+            log.debug("Publish join on topic ({}) from ({})", _joinTopic, joinTopic);
 
             int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
             try {
