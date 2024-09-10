@@ -356,29 +356,20 @@ public class PayloadService {
                                     e.printStackTrace();
                                 }
                             } else if (w.eventType == DelayedUplink.EVENT_TYPE_ACK) {
-                                w.helium = getHeliumPayload(w.chirpstack);
+                                w.helium = getHeliumJoinAckPayload(w.chirpstack);
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug("## " + mapper.writeValueAsString(w.chirpstack));
                                     log.debug(">> " + mapper.writeValueAsString(w.helium));
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
                                 }
                             } else if (w.eventType == DelayedUplink.EVET_TYPE_JOIN) {
-                                try {
-                                    ObjectMapper mapper = new ObjectMapper();
-                                    log.debug("## " + mapper.writeValueAsString(w.chirpstack));
-                                } catch (JsonProcessingException e) {
-                                    log.error(e.getMessage());
-                                    e.printStackTrace();
-                                }
-                                w.helium = getHeliumPayload(w.chirpstack);
+                                w.helium = getHeliumJoinAckPayload(w.chirpstack);
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug("## " + mapper.writeValueAsString(w.chirpstack));
                                     log.debug(">> " + mapper.writeValueAsString(w.helium));
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
@@ -459,6 +450,21 @@ public class PayloadService {
         payload.setSource(c.getLocation().getSource());
         return payload;
     }
+
+    public HeliumPayload getHeliumJoinAckPayload(ChirpstackPayload c) {
+
+        // get app_eui (default as this is not in the payload)
+        String appEui = "0000000000000000";
+
+        HeliumPayload payload = new HeliumPayload();
+        payload.setDev_eui(c.getDeviceInfo().getDevEui());
+        payload.setApp_eui(appEui);
+        payload.setName(c.getDeviceInfo().getDeviceName());
+        payload.setMetadata(new HntMetadata());
+        payload.getMetadata().setOrganization_id(c.getDeviceInfo().getTenantId());
+        return payload;
+    }
+
 
     public HeliumPayload getHeliumPayload(ChirpstackPayload c) {
         HeliumPayload h = new HeliumPayload();
