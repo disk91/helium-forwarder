@@ -256,6 +256,8 @@ public class MqttManager implements MqttCallback {
         try {
             // checks
             if ( message == null ) return true; // reject and not retry
+            if ( ackTopic.isEmpty() ) return true; // reject and not retry
+            
             String _ackTopic = ackTopic.replace("{{device_id}}", message.getDev_eui())
                     .replace("{{device_name}}", message.getName())
                     .replace("{{device_eui}}", message.getDev_eui())
@@ -286,6 +288,8 @@ public class MqttManager implements MqttCallback {
         try {
             // checks
             if ( message == null ) return true; // reject and not retry
+            if ( joinTopic.isEmpty() ) return true; // reject and not retry
+
             String _joinTopic = joinTopic.replace("{{device_id}}", message.getDev_eui())
                     .replace("{{device_name}}", message.getName())
                     .replace("{{device_eui}}", message.getDev_eui())
@@ -316,6 +320,7 @@ public class MqttManager implements MqttCallback {
         try {
             // checks
             if ( message == null ) return true; // reject and not retry
+            if ( locTopic.isEmpty() ) return true; // reject and not retry
 
             // Compose uplink topic
             String _locTopic = locTopic.replace("{{device_id}}", message.getDev_eui())

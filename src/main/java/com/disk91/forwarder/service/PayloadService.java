@@ -252,19 +252,24 @@ public class PayloadService {
             if ( !isTopicFormatAcceptable(dc.topicLoc) ) return false;
 
             dc.topicDown = req.getHeader("hdntopic");
-            if ( dc.topicDown != null ) dc.topicDown = dc.topicDown.trim();
+            if ( dc.topicDown != null ) {
+                dc.topicDown = dc.topicDown.trim();
+                if ( !isTopicFormatAcceptable(dc.topicDown) ) return false;
+            }
             else dc.topicDown = "";
-            if ( !isTopicFormatAcceptable(dc.topicDown) ) return false;
 
             dc.topicAck = req.getHeader("hacktopic");
-            if (dc.topicAck != null ) dc.topicAck = dc.topicAck.trim();
-            else dc.topicAck = "";
-            if ( !isTopicFormatAcceptable(dc.topicAck) ) return false;
+            if (dc.topicAck != null ) {
+                dc.topicAck = dc.topicAck.trim();
+                if ( !isTopicFormatAcceptable(dc.topicAck) ) return false;
+            } else dc.topicAck = "";
 
             dc.topicJoin = req.getHeader("hjointopic");
-            if (dc.topicJoin != null ) dc.topicJoin = dc.topicJoin.trim();
+            if (dc.topicJoin != null ) {
+                dc.topicJoin = dc.topicJoin.trim();
+                if ( !isTopicFormatAcceptable(dc.topicJoin) ) return false;
+            }
             else dc.topicJoin = "";
-            if ( !isTopicFormatAcceptable(dc.topicJoin) ) return false;
 
             dc.format = req.getHeader("hformat");
             if (dc.format != null ) {
@@ -356,6 +361,7 @@ public class PayloadService {
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
+                                    log.debug("## " + mapper.writeValueAsString(w.chirpstack));
                                     log.debug(">> " + mapper.writeValueAsString(w.helium));
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
@@ -366,6 +372,7 @@ public class PayloadService {
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
+                                    log.debug("## " + mapper.writeValueAsString(w.chirpstack));
                                     log.debug(">> " + mapper.writeValueAsString(w.helium));
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
