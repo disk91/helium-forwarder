@@ -30,11 +30,13 @@ public class MqttManager implements MqttCallback {
     private MemoryPersistence persistence;
 
     private String clientId;
+    private String format;  // Helium or Chirpstack (default Helium)
     private String url;
     private int qos;
     private String upTopic;
     private String locTopic;
     private String ackTopic;
+    private String joinTopic;
     private String downTopic;
     private String subscribeTopic;
 
@@ -56,9 +58,11 @@ public class MqttManager implements MqttCallback {
     public MqttManager(
             String _endpoint,
             String _clientId,
+            String _format,
             String _upTopic,
             String _locTopic,
             String _ackTopic,
+            String _joinTopic,
             String _downTopic,
             int _qos,
             DownlinkService _downlinkService
@@ -118,9 +122,11 @@ public class MqttManager implements MqttCallback {
             clientId = RandomString.getRandomString(6);
         } else clientId = _clientId;
         this.url = _scheme+_server+":"+_port;
+        this.format = _format.strip().toLowerCase();
         this.upTopic = _upTopic;
         this.locTopic = _locTopic;
         this.ackTopic = _ackTopic;
+        this.joinTopic = _joinTopic;
         this.downTopic = _downTopic;
         this.qos = _qos;
 
@@ -206,31 +212,38 @@ public class MqttManager implements MqttCallback {
     }
 
 
-    public boolean publishMessage( HeliumPayload message ) {
+    public boolean publishMessage( HeliumPayload message, ChirpstackPayload chirpMessage ) {
         if ( ! this.initSuccess || ! this.connected ) return false;
         try {
+
             // Add the deveui if not yet know in list for downlink control
             this.deviceEuis.computeIfAbsent(message.getDev_eui().toLowerCase(), k -> message.getDev_eui().toLowerCase());
 
             // Compose uplink topic
-            String _upTopic = upTopic.replace("{{device_id}}", message.getDev_eui() )
-                .replace("{{device_name}}", message.getName() )
-                .replace("{{device_eui}}", message.getDev_eui() )
-                .replace("{{app_eui}}", message.getApp_eui() )
-                .replace("{{organization_id}}", message.getMetadata().getOrganization_id() );
+            String _upTopic = upTopic.replace("{{device_id}}", message.getDev_eui())
+                    .replace("{{device_name}}", message.getName())
+                    .replace("{{device_eui}}", message.getDev_eui())
+                    .replace("{{app_eui}}", message.getApp_eui())
+                    .replace("{{organization_id}}", message.getMetadata().getOrganization_id());
 
-            log.debug("Publish up on topic ("+_upTopic+") from ("+upTopic+")");
+            log.debug("Publish up on topic (" + _upTopic + ") from (" + upTopic + ")");
 
-            int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
+            int _qos = (this.qos == -1) ? MQTT_QOS : this.qos;
             try {
                 ObjectMapper mapper = new ObjectMapper();
-                String _message = mapper.writeValueAsString(message);
+                String _message;
+                if ( this.format != null && this.format.compareTo("chirpstack") == 0 ) {
+                    // We want a Chirpstack Payload
+                    _message = mapper.writeValueAsString(chirpMessage);
+                } else {
+                    _message = mapper.writeValueAsString(message);
+                }
                 MqttMessage mqttmessage = new MqttMessage(_message.getBytes());
                 mqttmessage.setQos(_qos);
                 this.mqttClient.publish(_upTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
-                log.error("MQTT Up Parse exception for "+message.getDev_eui());
+                log.error("MQTT Up Parse exception for {}", message.getDev_eui());
             }
         } catch (MqttException me) {
             log.error("MQTT Up Publish Error", me);
@@ -238,38 +251,67 @@ public class MqttManager implements MqttCallback {
         return false;
     }
 
-    public boolean publishAck(ChirpstackPayload message) {
+    public boolean publishAck(HeliumPayload message, ChirpstackPayload chirpMessage ) {
         if ( ! this.initSuccess || ! this.connected ) return false;
         try {
             // checks
             if ( message == null ) return true; // reject and not retry
-            String _ackTopic = ackTopic.replace("{{device_id}}", message.getDeviceInfo().getDevEui() )
-                    .replace("{{device_name}}", message.getDeviceInfo().getDeviceName() )
-                    .replace("{{device_eui}}", message.getDeviceInfo().getDevEui() )
-                    .replace("{{app_eui}}", "0000000000000000" )
-                    .replace("{{organization_id}}", message.getDeviceInfo().getTenantId() );
+            String _ackTopic = ackTopic.replace("{{device_id}}", message.getDev_eui())
+                    .replace("{{device_name}}", message.getName())
+                    .replace("{{device_eui}}", message.getDev_eui())
+                    .replace("{{app_eui}}", message.getApp_eui())
+                    .replace("{{organization_id}}", message.getMetadata().getOrganization_id());
 
-            log.debug("Publish up on topic ("+_ackTopic+") from ("+ackTopic+")");
-
+            log.debug("Publish ack on topic ({}) from ({})", _ackTopic, ackTopic);
 
             int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
             try {
                 ObjectMapper mapper = new ObjectMapper();
-                String _message = mapper.writeValueAsString(message);
+                String _message = mapper.writeValueAsString(chirpMessage);
                 MqttMessage mqttmessage = new MqttMessage(_message.getBytes());
                 mqttmessage.setQos(_qos);
                 this.mqttClient.publish(_ackTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
-                log.error("MQTT Up Parse exception for "+message.getDeviceInfo().getDevEui());
+                log.error("MQTT Ack Parse exception for "+chirpMessage.getDeviceInfo().getDevEui());
             }
         } catch (MqttException me) {
-            log.error("MQTT Up Publish Error", me);
+            log.error("MQTT Ack Publish Error", me);
         }
         return false;
     }
 
-    public boolean publishLocation( HeliumLocPayload message ) {
+    public boolean publishJoin(HeliumPayload message, ChirpstackPayload chirpMessage ) {
+        if ( ! this.initSuccess || ! this.connected ) return false;
+        try {
+            // checks
+            if ( message == null ) return true; // reject and not retry
+            String _joinTopic = joinTopic.replace("{{device_id}}", message.getDev_eui())
+                    .replace("{{device_name}}", message.getName())
+                    .replace("{{device_eui}}", message.getDev_eui())
+                    .replace("{{app_eui}}", message.getApp_eui())
+                    .replace("{{organization_id}}", message.getMetadata().getOrganization_id());
+
+            log.debug("Publish join on topic ({}) from ({})", _joinTopic, ackTopic);
+
+            int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String _message = mapper.writeValueAsString(chirpMessage);
+                MqttMessage mqttmessage = new MqttMessage(_message.getBytes());
+                mqttmessage.setQos(_qos);
+                this.mqttClient.publish(_joinTopic, mqttmessage);
+                return true;
+            } catch (JsonProcessingException x) {
+                log.error("MQTT Join Parse exception for "+chirpMessage.getDeviceInfo().getDevEui());
+            }
+        } catch (MqttException me) {
+            log.error("MQTT Join Publish Error", me);
+        }
+        return false;
+    }
+
+    public boolean publishLocation( HeliumLocPayload message, ChirpstackPayload chirpMessage ) {
         if ( ! this.initSuccess || ! this.connected ) return false;
         try {
             // checks
@@ -287,7 +329,13 @@ public class MqttManager implements MqttCallback {
             int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
             try {
                 ObjectMapper mapper = new ObjectMapper();
-                String _message = mapper.writeValueAsString(message);
+                String _message;
+                if ( this.format != null && this.format.compareTo("chirpstack") == 0 ) {
+                    // We want a Chirpstack Payload
+                    _message = mapper.writeValueAsString(chirpMessage);
+                } else {
+                    _message = mapper.writeValueAsString(message);
+                }
                 MqttMessage mqttmessage = new MqttMessage(_message.getBytes());
                 mqttmessage.setQos(_qos);
                 this.mqttClient.publish(_locTopic, mqttmessage);

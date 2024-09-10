@@ -13,7 +13,6 @@ import fr.ingeniousthings.tools.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.pulsar.PulsarProperties;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -115,15 +114,19 @@ public class PayloadService {
         public static final int EVENT_TYPE_UPLINK = 0;
         public static final int EVENT_TYPE_LOCATION = 1;
         public static final int EVENT_TYPE_ACK = 2;
+        public static final int EVET_TYPE_JOIN = 3;
 
         public INTEGRATION_TYPE type = INTEGRATION_TYPE.UNKNOWN;
         public INTEGRATION_VERB verb = INTEGRATION_VERB.UNKNOWN;
         public String endpoint;
         public String locendpoint;
         public String ackendpoint;
+        public String joinendpoint;
         public String topicUp;
         public String topicLoc;
         public String topicAck;
+        public String topicJoin;
+        public String format;
         public int qos;
         public String topicDown;
         public String urlparam;
@@ -158,6 +161,8 @@ public class PayloadService {
             dc.eventType = DelayedUplink.EVENT_TYPE_LOCATION;
         } else if ( evtType.compareToIgnoreCase("ack") == 0 ) {
             dc.eventType = DelayedUplink.EVENT_TYPE_ACK;
+        } else if ( evtType.compareToIgnoreCase("join") == 0 ) {
+            dc.eventType = DelayedUplink.EVET_TYPE_JOIN;
         } else {
             log.error("Invalid Type received ("+evtType+")");
             return false;
@@ -208,16 +213,30 @@ public class PayloadService {
 
             // check
             if ( dc.endpoint.length() < 5 ) return false;
+            if ( ! dc.endpoint.toLowerCase().startsWith("http") ) return false;
+            if ( dc.endpoint.contains("internal/3.0") ) return false;
+
             if ( dc.locendpoint == null || dc.locendpoint.length() < 5 ) {
                 dc.locendpoint = null;
             } else {
                 if ( ! dc.locendpoint.toLowerCase().startsWith("http") ) return false;
                 if ( dc.locendpoint.contains("internal/3.0") ) return false;
             }
+
+            if ( dc.ackendpoint == null || dc.ackendpoint.length() < 5 ) dc.ackendpoint = null;
+            else {
+                if (!dc.ackendpoint.toLowerCase().startsWith("http")) return false;
+                if (dc.ackendpoint.contains("internal/3.0")) return false;
+            }
+
+            if ( dc.joinendpoint == null || dc.joinendpoint.length() < 5 ) dc.joinendpoint = null;
+            else {
+                if (!dc.joinendpoint.toLowerCase().startsWith("http")) return false;
+                if (dc.joinendpoint.contains("internal/3.0")) return false;
+            }
+
             if ( dc.verb == INTEGRATION_VERB.UNKNOWN ) return false;
-            if ( ! dc.endpoint.toLowerCase().startsWith("http") ) return false;
-            if ( dc.endpoint.contains("internal/3.0") ) return false;
-            if ( ! dc.ackendpoint.toLowerCase().startsWith("http") ) return false;
+
         } else if ( type.compareToIgnoreCase("mqtt") == 0 ) {
             log.debug("Got a MQTT Integration");
             dc.type = INTEGRATION_TYPE.MQTT;
@@ -241,6 +260,17 @@ public class PayloadService {
             if (dc.topicAck != null ) dc.topicAck = dc.topicAck.trim();
             else dc.topicAck = "";
             if ( !isTopicFormatAcceptable(dc.topicAck) ) return false;
+
+            dc.topicJoin = req.getHeader("hjointopic");
+            if (dc.topicJoin != null ) dc.topicJoin = dc.topicJoin.trim();
+            else dc.topicJoin = "";
+            if ( !isTopicFormatAcceptable(dc.topicJoin) ) return false;
+
+            dc.format = req.getHeader("hformat");
+            if (dc.format != null ) {
+                dc.format = dc.format.trim();
+                if (dc.format.compareTo("chipstack") != 0) dc.format = "helium";
+            } else dc.format = "helium";
 
             String sQos = req.getHeader("hqos");
             if ( sQos != null ) sQos = sQos.trim();
@@ -322,7 +352,25 @@ public class PayloadService {
                                     e.printStackTrace();
                                 }
                             } else if (w.eventType == DelayedUplink.EVENT_TYPE_ACK) {
-                                log.debug("Nothing to do on ack");
+                                w.helium = getHeliumPayload(w.chirpstack);
+                                // trace
+                                try {
+                                    ObjectMapper mapper = new ObjectMapper();
+                                    log.debug(">> " + mapper.writeValueAsString(w.helium));
+                                } catch (JsonProcessingException e) {
+                                    log.error(e.getMessage());
+                                    e.printStackTrace();
+                                }
+                            } else if (w.eventType == DelayedUplink.EVET_TYPE_JOIN) {
+                                w.helium = getHeliumPayload(w.chirpstack);
+                                // trace
+                                try {
+                                    ObjectMapper mapper = new ObjectMapper();
+                                    log.debug(">> " + mapper.writeValueAsString(w.helium));
+                                } catch (JsonProcessingException e) {
+                                    log.error(e.getMessage());
+                                    e.printStackTrace();
+                                }
                             } else {
                                 log.error("Invalid type of event ("+w.eventType+")");
                                 continue;
@@ -563,15 +611,19 @@ public class PayloadService {
             o.topicLoc,
             o.topicAck,
             o.topicDown,
+            o.topicJoin,
+            o.format,
             o.qos
         );
         if ( m != null ) {
             if ( o.eventType == DelayedUplink.EVENT_TYPE_UPLINK ) {
-                return m.publishMessage(o.helium);
+                return m.publishMessage(o.helium,o.chirpstack);
             } else if ( o.eventType == DelayedUplink.EVENT_TYPE_LOCATION ) {
-                return m.publishLocation(o.locPayload);
+                return m.publishLocation(o.locPayload,o.chirpstack);
             } else if (o.eventType == DelayedUplink.EVENT_TYPE_ACK) {
-                return m.publishAck(o.chirpstack);
+                return m.publishAck(o.helium,o.chirpstack);
+            } else if (o.eventType == DelayedUplink.EVET_TYPE_JOIN) {
+                return m.publishJoin(o.helium,o.chirpstack);
             }
         }
         return false;
@@ -625,7 +677,7 @@ public class PayloadService {
                 log.debug("Return code was " + responseEntity.getStatusCode());
                 return false;
 
-            } else if ( o.eventType == DelayedUplink.EVENT_TYPE_LOCATION ) {
+            } else if ( o.eventType == DelayedUplink.EVENT_TYPE_LOCATION && o.locendpoint != null ) {
 
                 HttpEntity<HeliumLocPayload> he = new HttpEntity<HeliumLocPayload>(o.locPayload, headers);
                 String url = o.locendpoint;
@@ -654,7 +706,7 @@ public class PayloadService {
                 }
                 log.debug("Return code was " + responseEntity.getStatusCode());
                 return false;
-            } else if (o.eventType == DelayedUplink.EVENT_TYPE_ACK) {
+            } else if (o.eventType == DelayedUplink.EVENT_TYPE_ACK && o.ackendpoint != null) {
                 HttpEntity<ChirpstackPayload> he = new HttpEntity<ChirpstackPayload>(o.chirpstack, headers);
                 String url = o.ackendpoint;
                 HttpMethod m;
@@ -670,6 +722,34 @@ public class PayloadService {
                 }
 
                 log.debug("Ack - Do " + m.name() + " to " + url);
+                ResponseEntity<String> responseEntity =
+                        restTemplate.exchange(
+                                url,
+                                m,
+                                he,
+                                String.class
+                        );
+                if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                    return true;
+                }
+                log.debug("Return code was " + responseEntity.getStatusCode());
+                return false;
+            } else if (o.eventType == DelayedUplink.EVET_TYPE_JOIN && o.joinendpoint != null) {
+                HttpEntity<ChirpstackPayload> he = new HttpEntity<ChirpstackPayload>(o.chirpstack, headers);
+                String url = o.joinendpoint;
+                HttpMethod m;
+                switch (o.verb) {
+                    default:
+                        //case GET: m = HttpMethod.GET; break;
+                    case POST:
+                        m = HttpMethod.POST;
+                        break;
+                    case PUT:
+                        m = HttpMethod.PUT;
+                        break;
+                }
+
+                log.debug("Join - Do " + m.name() + " to " + url);
                 ResponseEntity<String> responseEntity =
                         restTemplate.exchange(
                                 url,
