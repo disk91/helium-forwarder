@@ -132,33 +132,33 @@ public class MqttManager implements MqttCallback {
 
         if (this.downTopic != null && !this.downTopic.isEmpty()) {
             // if we don't have {{device_id}} in the
-            boolean haveDeviceId = _downTopic.contains("/{{device_id}}/")
-                || _downTopic.startsWith("{{device_id}}/")
-                || _downTopic.endsWith("/{{device_id}}");
+            boolean haveDeviceId = downTopic.contains("/{{device_id}}/")
+                || downTopic.startsWith("{{device_id}}/")
+                || downTopic.endsWith("/{{device_id}}");
 
             // get the downlink deviceId field for later fast extraction
-            String []  fields = _downTopic.split("/");
+            String []  fields = downTopic.split("/");
             for ( int i = 0 ; i < fields.length ; i++ ) {
                 if ( fields[i].compareToIgnoreCase("{{device_id}}") == 0 ) {
                     this.downlinkDevIdField = i;
                 }
             }
             if ( this.downlinkDevIdField == -1 ) {
-                log.warn("This is a strange situation "+_downTopic);
+                log.warn("This is a strange situation "+downTopic);
                 haveDeviceId = false;
             }
 
             if ( haveDeviceId ) {
-                this.subscribeTopic = _downTopic.replace("{{device_id}}", "+")
+                this.subscribeTopic = downTopic.replace("{{device_id}}", "+")
                     .replace("{{device_name}}", "+")
                     .replace("{{device_eui}}", "+")
                     .replace("{{app_eui}}", "+")
                     .replace("{{organization_id}}", "+");
                 // in case we had multiple "+" after this processing
                 this.subscribeTopic = this.subscribeTopic.replaceAll("/.*[+].*[+].*/", "/+/");
-                log.info("Downtopic: " + _downTopic + " Subscription topic: " + this.subscribeTopic);
+                log.info("Downtopic: " + downTopic + " Subscription topic: " + this.subscribeTopic);
             } else {
-                log.warn("We have a Mqtt setup without a supported path for "+this.url+" ("+_downTopic+")");
+                log.warn("We have a Mqtt setup without a supported path for "+this.url+" ("+downTopic+")");
             }
         } else this.subscribeTopic = null;
 
@@ -257,7 +257,7 @@ public class MqttManager implements MqttCallback {
             // checks
             if ( message == null ) return true; // reject and not retry
             if ( ackTopic.isEmpty() ) return true; // reject and not retry
-            
+
             String _ackTopic = ackTopic.replace("{{device_id}}", message.getDev_eui())
                     .replace("{{device_name}}", message.getName())
                     .replace("{{device_eui}}", message.getDev_eui())

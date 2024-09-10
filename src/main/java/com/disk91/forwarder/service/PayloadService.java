@@ -255,8 +255,7 @@ public class PayloadService {
             if ( dc.topicDown != null ) {
                 dc.topicDown = dc.topicDown.trim();
                 if ( !isTopicFormatAcceptable(dc.topicDown) ) return false;
-            }
-            else dc.topicDown = "";
+            } else dc.topicDown = "";
 
             dc.topicAck = req.getHeader("hacktopic");
             if (dc.topicAck != null ) {
