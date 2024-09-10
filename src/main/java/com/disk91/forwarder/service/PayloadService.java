@@ -367,6 +367,13 @@ public class PayloadService {
                                     e.printStackTrace();
                                 }
                             } else if (w.eventType == DelayedUplink.EVET_TYPE_JOIN) {
+                                try {
+                                    ObjectMapper mapper = new ObjectMapper();
+                                    log.debug("## " + mapper.writeValueAsString(w.chirpstack));
+                                } catch (JsonProcessingException e) {
+                                    log.error(e.getMessage());
+                                    e.printStackTrace();
+                                }
                                 w.helium = getHeliumPayload(w.chirpstack);
                                 // trace
                                 try {
