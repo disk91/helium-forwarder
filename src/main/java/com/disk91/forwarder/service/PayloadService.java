@@ -13,6 +13,7 @@ import fr.ingeniousthings.tools.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.pulsar.PulsarProperties;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -113,13 +114,16 @@ public class PayloadService {
 
         public static final int EVENT_TYPE_UPLINK = 0;
         public static final int EVENT_TYPE_LOCATION = 1;
+        public static final int EVENT_TYPE_ACK = 2;
 
         public INTEGRATION_TYPE type = INTEGRATION_TYPE.UNKNOWN;
         public INTEGRATION_VERB verb = INTEGRATION_VERB.UNKNOWN;
         public String endpoint;
         public String locendpoint;
+        public String ackendpoint;
         public String topicUp;
         public String topicLoc;
+        public String topicAck;
         public int qos;
         public String topicDown;
         public String urlparam;
@@ -152,6 +156,8 @@ public class PayloadService {
             dc.eventType = DelayedUplink.EVENT_TYPE_UPLINK;
         } else if ( evtType.compareToIgnoreCase("location") == 0 ) {
             dc.eventType = DelayedUplink.EVENT_TYPE_LOCATION;
+        } else if ( evtType.compareToIgnoreCase("ack") == 0 ) {
+            dc.eventType = DelayedUplink.EVENT_TYPE_ACK;
         } else {
             log.error("Invalid Type received ("+evtType+")");
             return false;
@@ -183,9 +189,11 @@ public class PayloadService {
             else if ( v.compareToIgnoreCase("put") == 0 ) dc.verb = INTEGRATION_VERB.PUT;
             dc.endpoint = req.getHeader("hendpoint");
             dc.locendpoint = req.getHeader("hlocendpoint");
+            dc.ackendpoint = req.getHeader("hackendpoint");
             dc.urlparam = req.getHeader("hurlparam");
             if ( dc.endpoint != null ) dc.endpoint = dc.endpoint.trim(); else return false;
             if ( dc.locendpoint != null ) dc.locendpoint = dc.locendpoint.trim();
+            if (dc.ackendpoint != null ) dc.ackendpoint = dc.ackendpoint.trim();
             if ( dc.urlparam != null ) dc.urlparam = dc.urlparam.trim();
             String headers = req.getHeader("hheaders");
             if ( headers != null ) {
@@ -209,6 +217,7 @@ public class PayloadService {
             if ( dc.verb == INTEGRATION_VERB.UNKNOWN ) return false;
             if ( ! dc.endpoint.toLowerCase().startsWith("http") ) return false;
             if ( dc.endpoint.contains("internal/3.0") ) return false;
+            if ( ! dc.ackendpoint.toLowerCase().startsWith("http") ) return false;
         } else if ( type.compareToIgnoreCase("mqtt") == 0 ) {
             log.debug("Got a MQTT Integration");
             dc.type = INTEGRATION_TYPE.MQTT;
@@ -227,6 +236,11 @@ public class PayloadService {
             if ( dc.topicDown != null ) dc.topicDown = dc.topicDown.trim();
             else dc.topicDown = "";
             if ( !isTopicFormatAcceptable(dc.topicDown) ) return false;
+
+            dc.topicAck = req.getHeader("hacktopic");
+            if (dc.topicAck != null ) dc.topicAck = dc.topicAck.trim();
+            else dc.topicAck = "";
+            if ( !isTopicFormatAcceptable(dc.topicAck) ) return false;
 
             String sQos = req.getHeader("hqos");
             if ( sQos != null ) sQos = sQos.trim();
@@ -307,6 +321,8 @@ public class PayloadService {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
                                 }
+                            } else if (w.eventType == DelayedUplink.EVENT_TYPE_ACK) {
+                                log.debug("Nothing to do on ack");
                             } else {
                                 log.error("Invalid type of event ("+w.eventType+")");
                                 continue;
@@ -545,6 +561,7 @@ public class PayloadService {
             null,
             o.topicUp,
             o.topicLoc,
+            o.topicAck,
             o.topicDown,
             o.qos
         );
@@ -553,6 +570,8 @@ public class PayloadService {
                 return m.publishMessage(o.helium);
             } else if ( o.eventType == DelayedUplink.EVENT_TYPE_LOCATION ) {
                 return m.publishLocation(o.locPayload);
+            } else if (o.eventType == DelayedUplink.EVENT_TYPE_ACK) {
+                return m.publishAck(o.chirpstack);
             }
         }
         return false;
@@ -624,18 +643,45 @@ public class PayloadService {
 
                 log.debug("Loc - Do " + m.name() + " to " + url);
                 ResponseEntity<String> responseEntity =
-                    restTemplate.exchange(
-                        url,
-                        m,
-                        he,
-                        String.class
-                    );
+                        restTemplate.exchange(
+                                url,
+                                m,
+                                he,
+                                String.class
+                        );
                 if (responseEntity.getStatusCode().is2xxSuccessful()) {
                     return true;
                 }
                 log.debug("Return code was " + responseEntity.getStatusCode());
                 return false;
+            } else if (o.eventType == DelayedUplink.EVENT_TYPE_ACK) {
+                HttpEntity<ChirpstackPayload> he = new HttpEntity<ChirpstackPayload>(o.chirpstack, headers);
+                String url = o.ackendpoint;
+                HttpMethod m;
+                switch (o.verb) {
+                    default:
+                        //case GET: m = HttpMethod.GET; break;
+                    case POST:
+                        m = HttpMethod.POST;
+                        break;
+                    case PUT:
+                        m = HttpMethod.PUT;
+                        break;
+                }
 
+                log.debug("Ack - Do " + m.name() + " to " + url);
+                ResponseEntity<String> responseEntity =
+                        restTemplate.exchange(
+                                url,
+                                m,
+                                he,
+                                String.class
+                        );
+                if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                    return true;
+                }
+                log.debug("Return code was " + responseEntity.getStatusCode());
+                return false;
             } else {
                 log.error("Invalid event type ("+o.eventType+")");
                 return true; // no need to retry this

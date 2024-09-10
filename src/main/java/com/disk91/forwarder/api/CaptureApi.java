@@ -97,6 +97,7 @@ public class CaptureApi {
 
             if (    event.compareToIgnoreCase("up") == 0
                  || event.compareToIgnoreCase("location") == 0
+                 || event.compareToIgnoreCase("ack") == 0
             ) {
                 if ( loadBalancerService.pushToNode(request,message,event) ) {
                     return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);
@@ -120,6 +121,7 @@ public class CaptureApi {
 
             if ( event.compareToIgnoreCase("up") == 0
               || event.compareToIgnoreCase("location") == 0
+              || event.compareToIgnoreCase("ack") == 0
             ) {
                 payloadService.asyncProcessEvent(request,message, event);
                 return new ResponseEntity<>(ActionResult.SUCESS(), HttpStatus.OK);

@@ -40,7 +40,7 @@ public class MqttConnectionService {
      * Get a corresponding Mqtt manager from the list
      * Create one if required
      */
-    public MqttManager getMqttManager(String endpoint, String clientId, String upTopic, String locTopic, String downTopic, int qos) {
+    public MqttManager getMqttManager(String endpoint, String clientId, String upTopic, String locTopic, String ackTopic, String downTopic, int qos) {
         String cId = (clientId==null)?"NULL":clientId;
         String key = endpoint+"#"+cId+"#"+upTopic+"#"+locTopic;
 
@@ -65,6 +65,7 @@ public class MqttConnectionService {
                 clientId,
                 upTopic,
                 locTopic,
+                ackTopic,
                 downTopic,
                 qos,
                 downlinkService
