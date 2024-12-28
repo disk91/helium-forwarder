@@ -406,9 +406,9 @@ public class MqttManager implements MqttCallback {
                         // process the payload
                         try {
                             HeliumMqttDownlinkPayload hmm = mapper.readValue(message.toString(), HeliumMqttDownlinkPayload.class);
+                            this.setLastUsed(Now.NowUtcMs());
                             if ( hmm.getPort() == -1 ) {
                                 // this is just a keep alive request for the downlink subscription
-                                this.setLastUsed(Now.NowUtcMs());
                                 log.debug("Downlink keep alive received");
                             } else {
                                 downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
