@@ -48,6 +48,13 @@ public class MqttManager implements MqttCallback {
 
     protected DownlinkService downlinkService;
 
+    protected long lastUsed = 0;
+    public long getLastUsed() {
+        return lastUsed;
+    }
+    public void setLastUsed(long lastUsed) {
+        this.lastUsed = lastUsed;
+    }
 
     /*
      * Up/Down topic format : device_id, device_name, device_eui, app_eui, and organization_id.
@@ -113,7 +120,7 @@ public class MqttManager implements MqttCallback {
                 }
             }
         } catch (Exception e) {
-            log.warn("Invalid mqtt server sequence: "+_endpoint);
+            log.warn("Invalid mqtt server sequence: {}", _endpoint);
             return;
         }
 
@@ -144,7 +151,7 @@ public class MqttManager implements MqttCallback {
                 }
             }
             if ( this.downlinkDevIdField == -1 ) {
-                log.warn("This is a strange situation "+downTopic);
+                log.warn("This is a strange situation {}", downTopic);
                 haveDeviceId = false;
             }
 
@@ -156,9 +163,9 @@ public class MqttManager implements MqttCallback {
                     .replace("{{organization_id}}", "+");
                 // in case we had multiple "+" after this processing
                 this.subscribeTopic = this.subscribeTopic.replaceAll("/.*[+].*[+].*/", "/+/");
-                log.info("Downtopic: " + downTopic + " Subscription topic: " + this.subscribeTopic);
+                log.info("Downtopic: {} Subscription topic: {}", downTopic, this.subscribeTopic);
             } else {
-                log.warn("We have a Mqtt setup without a supported path for "+this.url+" ("+downTopic+")");
+                log.warn("We have a Mqtt setup without a supported path for {} ({})", this.url, downTopic);
             }
         } else this.subscribeTopic = null;
 
@@ -176,11 +183,11 @@ public class MqttManager implements MqttCallback {
             if ( this.subscribeTopic != null ) {
                 this.mqttClient.subscribe(this.subscribeTopic, MQTT_QOS);
             }
-            log.info("New mqtt listener for "+this.url);
+            log.info("New mqtt listener for {}", this.url);
             this.initSuccess = true;
             this.connected = true;
         } catch (MqttException me) {
-            log.error("MQTT ERROR ("+me.getMessage()+") on "+this.url);
+            log.error("MQTT ERROR ({}) on {}", me.getMessage(), this.url);
         }
     }
 
@@ -362,7 +369,7 @@ public class MqttManager implements MqttCallback {
     @Override
     public void connectionLost(Throwable cause) {
         // don't care, will reconnect on next message
-        log.debug("MQTT - Connection Lost - "+cause.getMessage());
+        log.debug("MQTT - Connection Lost - {}", cause.getMessage());
         this.connected = false;
     }
 
@@ -380,7 +387,7 @@ public class MqttManager implements MqttCallback {
     public void messageArrived(String topicName, MqttMessage message) throws Exception {
         // Leave it blank for Publisher
         long start = Now.NowUtcMs();
-        log.debug("MQTT - MessageArrived on "+topicName);
+        log.debug("MQTT - MessageArrived on {}", topicName);
 
         try {
             ObjectMapper mapper = new ObjectMapper();
@@ -399,10 +406,16 @@ public class MqttManager implements MqttCallback {
                         // process the payload
                         try {
                             HeliumMqttDownlinkPayload hmm = mapper.readValue(message.toString(), HeliumMqttDownlinkPayload.class);
-                            downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
-                            log.debug("Downlink registered for processing");
+                            if ( hmm.getPort() == -1 ) {
+                                // this is just a keep alive request for the downlink subscription
+                                this.setLastUsed(Now.NowUtcMs());
+                                log.debug("Downlink keep alive received");
+                            } else {
+                                downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
+                                log.debug("Downlink registered for processing");
+                            }
                         } catch (JsonProcessingException x) {
-                            log.warn("Impossible to extract downlink payload from " + this.downTopic + "(" + this.url + ") skipping");
+                            log.warn("Impossible to extract downlink payload from {}({}) skipping", this.downTopic, this.url);
                         }
 
                     } else {
@@ -418,7 +431,7 @@ public class MqttManager implements MqttCallback {
                 log.debug("Can't find the devEUI field in topic");
             }
         } catch (Exception x) {
-            log.warn("Exception in processing MQTT donwlink "+x.getMessage());
+            log.warn("Exception in processing MQTT donwlink {}", x.getMessage());
             x.printStackTrace();
         }
     }

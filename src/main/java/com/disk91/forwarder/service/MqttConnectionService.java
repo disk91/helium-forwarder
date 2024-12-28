@@ -19,10 +19,8 @@ public class MqttConnectionService {
 
     public static final long MQTT_TIMEOUT = 2*Now.ONE_HOUR; // after 2h we shut down the existing connection
 
-    protected class MqttConnection {
+    protected static class MqttConnection {
         public MqttManager mqqt = null;
-        public long lastUsed = 0;
-
     }
 
     private static final Object lock = new Object();
@@ -60,7 +58,7 @@ public class MqttConnectionService {
             m = mqttConnections.get(key);
         }
         if ( m != null && m.mqqt.isConnected() ) {
-            m.lastUsed = Now.NowUtcMs();
+            m.mqqt.setLastUsed(Now.NowUtcMs());
             return m.mqqt;
         } else {
             if ( m != null ) {
@@ -69,7 +67,7 @@ public class MqttConnectionService {
                 mqttConnections.remove(key);
             }
             // create a new Manager
-            log.info("Create a new MqttManager for "+endpoint);
+            log.info("Create a new MqttManager for {}", endpoint);
             MqttManager mm = new MqttManager(
                 endpoint,
                 clientId,
@@ -85,7 +83,7 @@ public class MqttConnectionService {
             if ( mm.isInitSuccess() ) {
                 m = new MqttConnection();
                 m.mqqt = mm;
-                m.lastUsed = Now.NowUtcMs();
+                m.mqqt.setLastUsed(Now.NowUtcMs());
                 synchronized(lock) {
                     this.mqttConnections.put(key, m);
                 }
@@ -101,13 +99,13 @@ public class MqttConnectionService {
         long now = Now.NowUtcMs();
         for ( String key : this.mqttConnections.keySet() ) {
             MqttConnection m = this.mqttConnections.get(key);
-            if ( (now - m.lastUsed) > MQTT_TIMEOUT ) {
+            if ( (now - m.mqqt.getLastUsed()) > MQTT_TIMEOUT ) {
                 // candidate for removal
                 toRemove.add(key);
             }
         }
-        if ( toRemove.size() > 0 ) {
-            log.info("Clean connection "+toRemove.size()+" mqtt connections");
+        if (!toRemove.isEmpty()) {
+            log.info("Clean connection {} mqtt connections", toRemove.size());
             synchronized (lock) {
                 for (String k : toRemove) {
                     this.mqttConnections.remove(k);

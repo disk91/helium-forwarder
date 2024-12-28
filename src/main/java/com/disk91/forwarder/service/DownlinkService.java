@@ -167,7 +167,12 @@ public class DownlinkService {
 
         DelayedDownlink dl = new DelayedDownlink();
         dl.devEui = ds.devEui;
-        String s = new String(Base64.decodeBase64(d.getPayload_raw()));
+        byte [] bPayload = Base64.decodeBase64(d.getPayload_raw());
+        if ( bPayload == null && d.getPayload_raw().compareToIgnoreCase("__clear_downlink_queue__") != 0 ) {
+            log.debug("Dwn - Invalid payload");
+            return false;
+        }
+        String s = (bPayload == null )?"":new String(bPayload);
         if ( s.compareToIgnoreCase("__clear_downlink_queue__") == 0 || d.getPayload_raw().compareToIgnoreCase("__clear_downlink_queue__") == 0 ) {
             dl.type = DOWNLINK_TYPE.CLEAR;
             dl.payloadB64 = null;
@@ -201,7 +206,13 @@ public class DownlinkService {
 
         DelayedDownlink dl = new DelayedDownlink();
         dl.devEui = deviceId;
-        String s = new String(Base64.decodeBase64(d.getPayload_raw()));
+        byte [] bPayload = Base64.decodeBase64(d.getPayload_raw());
+        if ( bPayload == null && d.getPayload_raw().compareToIgnoreCase("__clear_downlink_queue__") != 0 ) {
+            log.debug("Dwn - Invalid payload");
+            return false;
+        }
+        String s = (bPayload == null )?"":new String(bPayload);
+
         if ( s.compareToIgnoreCase("__clear_downlink_queue__") == 0 || d.getPayload_raw().compareToIgnoreCase("__clear_downlink_queue__") == 0 ) {
             dl.type = DOWNLINK_TYPE.CLEAR;
             dl.payloadB64 = null;
@@ -240,7 +251,7 @@ public class DownlinkService {
         }
         public void run() {
             this.status = true;
-            log.debug("Starting Downlink process thread "+id);
+            log.debug("Starting Downlink process thread {}", id);
             DelayedDownlink w;
             while ( (w = queue.poll()) != null || asyncDownlinkEnable ) {
                 if ( w != null) {
@@ -289,7 +300,7 @@ public class DownlinkService {
                     Tools.sleep(10);
                 }
             }
-            log.debug("Closing Downlink process thread "+id);
+            log.debug("Closing Downlink process thread {}", id);
         }
     }
 
@@ -315,7 +326,7 @@ public class DownlinkService {
             headers.add(HttpHeaders.AUTHORIZATION, "Bearer "+forwarderConfig.getChirpstackApiAdminKey());
             HttpEntity<ChirpstackEnqueue> he = new HttpEntity<ChirpstackEnqueue>(e,headers);
             String url=forwarderConfig.getChirpstackApiBase()+"/api/devices/"+o.devEui+"/queue";
-            log.debug("Do down "+o.devEui+" with "+Stuff.bytesToHex(Base64.decodeBase64(o.payloadB64))+" ( "+e.getQueueItem().getData() + " ) on port "+e.getQueueItem().getfPort());
+            log.debug("Do down {} with {} ( {} ) on port {}", o.devEui, Stuff.bytesToHex(Base64.decodeBase64(o.payloadB64)), e.getQueueItem().getData(), e.getQueueItem().getfPort());
             ResponseEntity<String> responseEntity =
                 restTemplate.exchange(
                     url,
@@ -328,13 +339,13 @@ public class DownlinkService {
             }
             return false;
         } catch (HttpClientErrorException x) {
-            log.debug("Dwn - Client error - "+x.getMessage());
+            log.debug("Dwn - Client error - {}", x.getMessage());
             return false;
         } catch (HttpServerErrorException x) {
-            log.debug("Dwn - Server error - "+x.getMessage());
+            log.debug("Dwn - Server error - {}", x.getMessage());
             return false;
         } catch (Exception x ) {
-            log.debug("Dwn - error - "+x.getMessage());
+            log.debug("Dwn - error - {}", x.getMessage());
             return false;
         }
     }
@@ -351,7 +362,7 @@ public class DownlinkService {
             headers.add(HttpHeaders.AUTHORIZATION, "Bearer "+forwarderConfig.getChirpstackApiAdminKey());
             HttpEntity<String> he = new HttpEntity<String>(headers);
             String url=forwarderConfig.getChirpstackApiBase()+"/api/devices/"+o.devEui+"/queue";
-            log.debug("Do down "+o.devEui+" clear ");
+            log.debug("Do down {} clear ", o.devEui);
             ResponseEntity<String> responseEntity =
                 restTemplate.exchange(
                     url,
@@ -359,18 +370,15 @@ public class DownlinkService {
                     he,
                     String.class
                 );
-            if ( responseEntity.getStatusCode().is2xxSuccessful() ) {
-                return true;
-            }
-            return false;
+            return responseEntity.getStatusCode().is2xxSuccessful();
         } catch (HttpClientErrorException e) {
-            log.debug("Dwn Clear - Client error - "+e.getMessage());
+            log.debug("Dwn Clear - Client error - {}", e.getMessage());
             return false;
         } catch (HttpServerErrorException e) {
-            log.debug("Dwn Clear - Server error - "+e.getMessage());
+            log.debug("Dwn Clear - Server error - {}", e.getMessage());
             return false;
         } catch (Exception x ) {
-            log.debug("Dwn Clear - error - "+x.getMessage());
+            log.debug("Dwn Clear - error - {}", x.getMessage());
             return false;
         }
     }
