@@ -254,7 +254,6 @@ public class PayloadService {
             dc.topicDown = req.getHeader("hdntopic");
             if ( dc.topicDown != null ) {
                 dc.topicDown = dc.topicDown.trim();
-                log.debug("** Dwn topic : {}", dc.topicDown);
                 if ( !isTopicFormatAcceptable(dc.topicDown) ) return false;
             } else dc.topicDown = "";
 
