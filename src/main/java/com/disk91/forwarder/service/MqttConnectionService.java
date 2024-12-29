@@ -67,7 +67,7 @@ public class MqttConnectionService {
                 mqttConnections.remove(key);
             }
             // create a new Manager
-            log.info("Create a new MqttManager for {}", endpoint);
+            log.info("Create a new MqttManager for {} with dntopic {}", endpoint,downTopic);
             MqttManager mm = new MqttManager(
                 endpoint,
                 clientId,

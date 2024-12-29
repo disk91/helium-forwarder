@@ -55,7 +55,7 @@ public class PayloadService {
         log.info("Waiting for downlink expiration");
         for ( int i = 0 ; i < DownlinkService.DOWNLINK_EXPIRATION ; i += 1000 ) {
             Tools.sleep(1000);
-            log.info("Progress : "+Math.floor((100*i)/DownlinkService.DOWNLINK_EXPIRATION)+"%");
+            log.info("Progress : {}%", Math.floor((100 * i) / DownlinkService.DOWNLINK_EXPIRATION));
         }
         log.info("Closing Downlink");
         downlinkService.stopDownlinks();
@@ -82,8 +82,8 @@ public class PayloadService {
     @Autowired
     protected ForwarderConfig forwarderConfig;
 
-    Boolean threadRunningUplink[];
-    Thread uplinkThreads[];
+    Boolean[] threadRunningUplink;
+    Thread[] uplinkThreads;
 
     protected ConcurrentLinkedQueue<DelayedUplink> asyncUplink = new ConcurrentLinkedQueue<>();
 
@@ -96,7 +96,7 @@ public class PayloadService {
         threadRunningUplink = new Boolean[forwarderConfig.getHeliumAsyncProcessor()];
         uplinkThreads = new Thread[forwarderConfig.getHeliumAsyncProcessor()];
         for ( int q = 0 ; q < forwarderConfig.getHeliumAsyncProcessor() ; q++) {
-            log.debug("Prepare Thread "+q);
+            log.debug("Prepare Thread {}", q);
             threadRunningUplink[q] = Boolean.FALSE;
             Runnable r = new ProcessUplink(q, asyncUplink, threadRunningUplink[q]);
             uplinkThreads[q] = new Thread(r);
@@ -145,7 +145,7 @@ public class PayloadService {
     // Make sure a topic contains only a-Z A-Z 0-9 -_{} . and / characters
     public boolean isTopicFormatAcceptable(String topic) {
         boolean r = topic.matches("^[a-zA-Z0-9_{}./\\-]+$");
-        if ( !r ) log.warn("Got an invalid topic ("+topic+")");
+        if ( !r ) log.warn("Got an invalid topic ({})", topic);
         return r;
     }
 
@@ -164,7 +164,7 @@ public class PayloadService {
         } else if ( evtType.compareToIgnoreCase("join") == 0 ) {
             dc.eventType = DelayedUplink.EVET_TYPE_JOIN;
         } else {
-            log.error("Invalid Type received ("+evtType+")");
+            log.error("Invalid Type received ({})", evtType);
             return false;
         }
 
@@ -188,7 +188,7 @@ public class PayloadService {
             dc.type = INTEGRATION_TYPE.HTTP;
             String v = req.getHeader("hverb");
             if ( v!=null ) v = v.trim();
-            else v="unknown";   // defaut behavior
+            else v="unknown";   // default behavior
             if ( v.compareToIgnoreCase("post") == 0 ) dc.verb = INTEGRATION_VERB.POST;
             else if ( v.compareToIgnoreCase("get") == 0 ) dc.verb = INTEGRATION_VERB.GET;
             else if ( v.compareToIgnoreCase("put") == 0 ) dc.verb = INTEGRATION_VERB.PUT;
@@ -206,7 +206,7 @@ public class PayloadService {
                     ObjectMapper mapper = new ObjectMapper();
                     dc.headers = mapper.readValue(headers, KeyValue.class);
                 } catch (JsonProcessingException e) {
-                    log.error("Error in parsing Headers for " + c.getDeviceInfo().getDevEui());
+                    log.error("Error in parsing Headers for {}", c.getDeviceInfo().getDevEui());
                     dc.headers = new KeyValue();
                 }
             } else dc.headers = new KeyValue();
@@ -254,6 +254,7 @@ public class PayloadService {
             dc.topicDown = req.getHeader("hdntopic");
             if ( dc.topicDown != null ) {
                 dc.topicDown = dc.topicDown.trim();
+                log.debug("** Dwn topic : {}", dc.topicDown);
                 if ( !isTopicFormatAcceptable(dc.topicDown) ) return false;
             } else dc.topicDown = "";
 
@@ -294,10 +295,10 @@ public class PayloadService {
             if ( ! dc.topicDown.isEmpty() && dc.topicDown.length() < 3 ) return false;
         } else {
             // unsupported type
-            log.warn("Received unsupported type ("+type.substring(0,Math.min(type.length(), 6))+")");
+            log.warn("Received unsupported type ({})", type.substring(0, Math.min(type.length(), 6)));
         }
         // type.compareToIgnoreCase("google_sheets") == 0
-        log.debug("Add Frame in queue ("+type+")");
+        log.debug("Add Frame in queue ({})", type);
         asyncUplink.add(dc);
         prometeusService.addUplinkInQueue();
         return true;
@@ -317,7 +318,7 @@ public class PayloadService {
         }
         public void run() {
             this.status = true;
-            log.debug("Starting Payload process thread "+id);
+            log.debug("Starting Payload process thread {}", id);
             DelayedUplink w = queue.poll();
             while ( w != null || asyncUplinkEnable ) {
                 try {
@@ -340,7 +341,7 @@ public class PayloadService {
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug(">> " + mapper.writeValueAsString(w.helium));
+                                    log.debug(">> {}", mapper.writeValueAsString(w.helium));
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
@@ -350,7 +351,7 @@ public class PayloadService {
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug("## " + mapper.writeValueAsString(w.locPayload));
+                                    log.debug("## {}", mapper.writeValueAsString(w.locPayload));
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
@@ -360,7 +361,7 @@ public class PayloadService {
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug(">> " + mapper.writeValueAsString(w.helium));
+                                    log.debug(">> {}", mapper.writeValueAsString(w.helium));
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
@@ -370,13 +371,13 @@ public class PayloadService {
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug(">> " + mapper.writeValueAsString(w.helium));
+                                    log.debug(">> {}", mapper.writeValueAsString(w.helium));
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
                                 }
                             } else {
-                                log.error("Invalid type of event ("+w.eventType+")");
+                                log.error("Invalid type of event ({})", w.eventType);
                                 continue;
                             }
 
@@ -410,20 +411,20 @@ public class PayloadService {
                                     }
                                 }
                             } else {
-                                log.warn("Received an invalid type "+w.type);
+                                log.warn("Received an invalid type {}", w.type);
                             }
                         }
                     } else {
                         Tools.sleep(10);
                     }
                 } catch (Exception x) {
-                    log.error("Exception in processing frame "+x.getMessage());
+                    log.error("Exception in processing frame {}", x.getMessage());
                     x.printStackTrace();
                 } finally {
                     w = queue.poll();
                 }
             }
-            log.debug("Closing Payload process thread "+id);
+            log.debug("Closing Payload process thread {}", id);
         }
     }
 

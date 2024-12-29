@@ -233,7 +233,7 @@ public class MqttManager implements MqttCallback {
                     .replace("{{app_eui}}", message.getApp_eui())
                     .replace("{{organization_id}}", message.getMetadata().getOrganization_id());
 
-            log.debug("Publish up on topic (" + _upTopic + ") from (" + upTopic + ")");
+            log.debug("Publish up on topic ({}) from ({})", _upTopic, upTopic);
 
             int _qos = (this.qos == -1) ? MQTT_QOS : this.qos;
             try {
@@ -253,7 +253,7 @@ public class MqttManager implements MqttCallback {
                 log.error("MQTT Up Parse exception for {}", message.getDev_eui());
             }
         } catch (MqttException me) {
-            log.error("MQTT Up Publish Error", me);
+            log.error("MQTT Up Publish Error {}", me.getMessage());
         }
         return false;
     }
@@ -336,7 +336,7 @@ public class MqttManager implements MqttCallback {
                 .replace("{{app_eui}}", message.getApp_eui())
                 .replace("{{organization_id}}", message.getOrganization_id() );
 
-            log.info("Publish loc on topic ("+_locTopic+") from ("+locTopic+")");
+            log.info("Publish loc on topic ({}) from ({})", _locTopic, locTopic);
 
             int _qos = ( this.qos == -1 )?MQTT_QOS:this.qos;
             try {
@@ -353,7 +353,7 @@ public class MqttManager implements MqttCallback {
                 this.mqttClient.publish(_locTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
-                log.error("MQTT Loc Parse exception for "+message.getDev_eui());
+                log.error("MQTT Loc Parse exception for {}", message.getDev_eui());
             }
         } catch (MqttException me) {
             log.error("MQTT Loc Publish Error", me);
@@ -412,7 +412,7 @@ public class MqttManager implements MqttCallback {
                                 log.debug("Downlink keep alive received");
                             } else {
                                 downlinkService.asyncProcessMqttDownlink(hmm, deviceEui);
-                                log.debug("Downlink registered for processing");
+                                log.debug("Downlink for {} registered for processing",deviceEui);
                             }
                         } catch (JsonProcessingException x) {
                             log.warn("Impossible to extract downlink payload from {}({}) skipping", this.downTopic, this.url);
@@ -425,10 +425,10 @@ public class MqttManager implements MqttCallback {
                         log.debug("Downlink from a device currently unknown");
                     }
                 } else {
-                    log.debug("DevEui format is not an hexString");
+                    log.debug("Downlink DevEui format is not an hexString");
                 }
             } else {
-                log.debug("Can't find the devEUI field in topic");
+                log.debug("Downlink Can't find the devEUI field in topic");
             }
         } catch (Exception x) {
             log.warn("Exception in processing MQTT donwlink {}", x.getMessage());
