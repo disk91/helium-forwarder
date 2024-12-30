@@ -282,7 +282,7 @@ public class MqttManager implements MqttCallback {
                 this.mqttClient.publish(_ackTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
-                log.error("MQTT Ack Parse exception for "+chirpMessage.getDeviceInfo().getDevEui());
+                log.error("MQTT Ack Parse exception for {}", chirpMessage.getDeviceInfo().getDevEui());
             }
         } catch (MqttException me) {
             log.error("MQTT Ack Publish Error", me);
@@ -295,6 +295,10 @@ public class MqttManager implements MqttCallback {
         try {
             // checks
             if ( message == null ) return true; // reject and not retry
+
+            // Add the deveui if not yet know in list for downlink control
+            this.deviceEuis.computeIfAbsent(message.getDev_eui().toLowerCase(), k -> message.getDev_eui().toLowerCase());
+
             if ( joinTopic.isEmpty() ) return true; // reject and not retry
 
             String _joinTopic = joinTopic.replace("{{device_id}}", message.getDev_eui())
@@ -314,7 +318,7 @@ public class MqttManager implements MqttCallback {
                 this.mqttClient.publish(_joinTopic, mqttmessage);
                 return true;
             } catch (JsonProcessingException x) {
-                log.error("MQTT Join Parse exception for "+chirpMessage.getDeviceInfo().getDevEui());
+                log.error("MQTT Join Parse exception for {}", chirpMessage.getDeviceInfo().getDevEui());
             }
         } catch (MqttException me) {
             log.error("MQTT Join Publish Error", me);
@@ -397,7 +401,7 @@ public class MqttManager implements MqttCallback {
 
             // Device Id comes from the topic, looks like a mess
             String[] topics = topicName.split("/");
-            if (topics.length > this.downlinkDevIdField) {
+            if (topics.length > this.downlinkDevIdField && this.downlinkDevIdField >=0 ) {
                 String deviceEui = topics[this.downlinkDevIdField];
                 if (Stuff.isAnHexString(deviceEui)) {
                     // verify the device Id is authorized
@@ -422,7 +426,7 @@ public class MqttManager implements MqttCallback {
                         // can be normal due to load balancing
                         // @TODO when balanced, we could process it twice potentially
                         // but a such case usually happen before a restart cleaning the cache
-                        log.debug("Downlink from a device currently unknown");
+                        log.debug("Downlink from a device ({})currently unknown id {}",deviceEui,downlinkDevIdField);
                     }
                 } else {
                     log.debug("Downlink DevEui format is not an hexString");
@@ -431,7 +435,7 @@ public class MqttManager implements MqttCallback {
                 log.debug("Downlink Can't find the devEUI field in topic");
             }
         } catch (Exception x) {
-            log.warn("Exception in processing MQTT donwlink {}", x.getMessage());
+            log.warn("Exception in processing MQTT downlink {}", x.getMessage());
             x.printStackTrace();
         }
     }
