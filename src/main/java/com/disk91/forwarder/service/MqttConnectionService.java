@@ -50,7 +50,7 @@ public class MqttConnectionService {
             int qos
     ) {
         String cId = (clientId==null)?"NULL":clientId;
-        String key = endpoint+"#"+cId+"#"+upTopic+"#"+locTopic+"#"+ackTopic+"#"+joinTopic;
+        String key = endpoint+"#"+cId+"#"+upTopic+"#"+locTopic+"#"+ackTopic+"#"+joinTopic+"#"+downTopic;
 
         // search if exists
         MqttConnection m;
