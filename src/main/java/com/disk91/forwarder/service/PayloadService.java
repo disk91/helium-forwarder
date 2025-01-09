@@ -6,6 +6,7 @@ import com.disk91.forwarder.api.interfaces.HeliumLocPayload;
 import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.api.interfaces.sub.*;
 import com.disk91.forwarder.mqtt.MqttManager;
+import com.disk91.forwarder.mqtt.MqttSender;
 import com.disk91.forwarder.service.itf.HotspotPosition;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -113,7 +114,7 @@ public class PayloadService {
 
         public static final int EVENT_TYPE_UPLINK = 0;
         public static final int EVENT_TYPE_LOCATION = 1;
-        public static final int EVENT_TYPE_ACK = 2;
+        public static final int EVENT_TYPE_JACK = 2;
         public static final int EVET_TYPE_JOIN = 3;
 
         public INTEGRATION_TYPE type = INTEGRATION_TYPE.UNKNOWN;
@@ -160,7 +161,7 @@ public class PayloadService {
         } else if ( evtType.compareToIgnoreCase("location") == 0 ) {
             dc.eventType = DelayedUplink.EVENT_TYPE_LOCATION;
         } else if ( evtType.compareToIgnoreCase("ack") == 0 ) {
-            dc.eventType = DelayedUplink.EVENT_TYPE_ACK;
+            dc.eventType = DelayedUplink.EVENT_TYPE_JACK;
         } else if ( evtType.compareToIgnoreCase("join") == 0 ) {
             dc.eventType = DelayedUplink.EVET_TYPE_JOIN;
         } else {
@@ -303,6 +304,8 @@ public class PayloadService {
         return true;
     }
 
+    @Autowired
+    protected MqttSender mqttSender;
 
     public class ProcessUplink implements Runnable {
 
@@ -335,32 +338,39 @@ public class PayloadService {
                             log.debug("Find one in message in queue");
                             prometeusService.remUplinkInQueue();
 
+                            String message = "";
                             if ( w.eventType == DelayedUplink.EVENT_TYPE_UPLINK ) {
                                 w.helium = getHeliumPayload(w.chirpstack);
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug(">> {}", mapper.writeValueAsString(w.helium));
+                                    if (w.format.compareTo("chipstack") == 0) {
+                                        message = mapper.writeValueAsString(w.chirpstack);
+                                    } else {
+                                        message = mapper.writeValueAsString(w.helium);
+                                    }
+                                    log.debug("UP : {}", message);
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
-                                    e.printStackTrace();
                                 }
                             } else if (w.eventType == DelayedUplink.EVENT_TYPE_LOCATION ) {
                                 w.locPayload = getHeliumLocPayload(w.chirpstack);
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug("## {}", mapper.writeValueAsString(w.locPayload));
+                                    message = mapper.writeValueAsString(w.locPayload);
+                                    log.debug("LOC : {}", message);
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
                                 }
-                            } else if (w.eventType == DelayedUplink.EVENT_TYPE_ACK) {
+                            } else if (w.eventType == DelayedUplink.EVENT_TYPE_JACK) {
                                 w.helium = getHeliumJoinAckPayload(w.chirpstack);
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug(">> {}", mapper.writeValueAsString(w.helium));
+                                    message = mapper.writeValueAsString(w.chirpstack);
+                                    log.debug("JACK : {}", message);
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
@@ -370,7 +380,8 @@ public class PayloadService {
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    log.debug(">> {}", mapper.writeValueAsString(w.helium));
+                                    message = mapper.writeValueAsString(w.chirpstack);
+                                    log.debug("JOIN : {}", message);
                                 } catch (JsonProcessingException e) {
                                     log.error(e.getMessage());
                                     e.printStackTrace();
@@ -382,7 +393,18 @@ public class PayloadService {
 
                             // apply integration
                             if (w.type == INTEGRATION_TYPE.HTTP) {
-                                if (!processHttp(w)) {
+                                int returnCode = processHttp(w);
+                                if (returnCode != 200) {
+                                    mqttSender.publishMessage(
+                                            "helium/forwarder/process/",
+                                            new MqttSender.FrameForwardReport(
+                                                    w.helium.getDev_eui(),
+                                                    w.chirpstack.getDeduplicationId(),
+                                                    w.retry > 0 ? MqttSender.FrameForwardReportType.HTTP_RETRY_FAILURE : MqttSender.FrameForwardReportType.HTTP_FAILURE,
+                                                    ""+returnCode,
+                                                    message
+                                            ),0
+                                    );
                                     w.retry++;
                                     if (w.retry < 3) {
                                         log.debug("Http failure, add to retry");
@@ -394,9 +416,30 @@ public class PayloadService {
                                     } else {
                                         prometeusService.addUplinkFailure();
                                     }
+                                } else {
+                                    mqttSender.publishMessage(
+                                            "helium/forwarder/process/",
+                                            new MqttSender.FrameForwardReport(
+                                                    w.helium.getDev_eui(),
+                                                    w.chirpstack.getDeduplicationId(),
+                                                    w.retry > 0 ? MqttSender.FrameForwardReportType.HTTP_RETRY_SUCCESS : MqttSender.FrameForwardReportType.HTTP_SUCCESS,
+                                                    ""+returnCode,
+                                                    message
+                                            ),0
+                                    );
                                 }
                             } else if ( w.type == INTEGRATION_TYPE.MQTT ) {
                                 if (!processMqtt(w)) {
+                                    mqttSender.publishMessage(
+                                            "helium/forwarder/process/",
+                                            new MqttSender.FrameForwardReport(
+                                                    w.helium.getDev_eui(),
+                                                    w.chirpstack.getDeduplicationId(),
+                                                    w.retry > 0 ? MqttSender.FrameForwardReportType.MQTT_RETRY_FAILURE : MqttSender.FrameForwardReportType.MQTT_FAILURE,
+                                                    "FAILED",
+                                                    message
+                                            ),0
+                                    );
                                     w.retry++;
                                     if (w.retry < 3) {
                                         log.debug("Mqtt failure, add to retry");
@@ -408,6 +451,17 @@ public class PayloadService {
                                     } else {
                                         prometeusService.addUplinkFailure();
                                     }
+                                } else {
+                                    mqttSender.publishMessage(
+                                            "helium/forwarder/process/",
+                                            new MqttSender.FrameForwardReport(
+                                                    w.helium.getDev_eui(),
+                                                    w.chirpstack.getDeduplicationId(),
+                                                    w.retry > 0 ? MqttSender.FrameForwardReportType.MQTT_RETRY_SUCCESS : MqttSender.FrameForwardReportType.MQTT_SUCCESS,
+                                                    "SUCCESS",
+                                                    message
+                                            ),0
+                                    );
                                 }
                             } else {
                                 log.warn("Received an invalid type {}", w.type);
@@ -598,7 +652,7 @@ public class PayloadService {
                             rx.getMetadata().setLat(Double.parseDouble(rx.getMetadata().getGateway_lat()));
                             foundLoc = true;
                         } catch ( NumberFormatException x ) {
-                            log.warn("Invalid Gateway location ("+rx.getMetadata().getGateway_lat()+", "+rx.getMetadata().getGateway_long()+")");
+                            log.warn("Invalid Gateway location ({}, {})", rx.getMetadata().getGateway_lat(), rx.getMetadata().getGateway_long());
                         }
                     }
                     if ( !foundLoc ) {
@@ -639,7 +693,7 @@ public class PayloadService {
                 return m.publishMessage(o.helium,o.chirpstack);
             } else if ( o.eventType == DelayedUplink.EVENT_TYPE_LOCATION ) {
                 return m.publishLocation(o.locPayload,o.chirpstack);
-            } else if (o.eventType == DelayedUplink.EVENT_TYPE_ACK) {
+            } else if (o.eventType == DelayedUplink.EVENT_TYPE_JACK) {
                 return m.publishAck(o.helium,o.chirpstack);
             } else if (o.eventType == DelayedUplink.EVET_TYPE_JOIN) {
                 return m.publishJoin(o.helium,o.chirpstack);
@@ -652,7 +706,7 @@ public class PayloadService {
     // ----------------------------------
     // Process HTTP
     // ----------------------------------
-    protected boolean processHttp(
+    protected int processHttp(
             DelayedUplink o
     ) {
 
@@ -682,7 +736,7 @@ public class PayloadService {
                         break;
                 }
 
-                log.debug("Do " + m.name() + " to " + url);
+                log.debug("Do {} to {}", m.name(), url);
                 ResponseEntity<String> responseEntity =
                     restTemplate.exchange(
                         url,
@@ -691,10 +745,10 @@ public class PayloadService {
                         String.class
                     );
                 if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                    return true;
+                    return 200;
                 }
-                log.debug("Return code was " + responseEntity.getStatusCode());
-                return false;
+                log.debug("Return code was {}", responseEntity.getStatusCode());
+                return responseEntity.getStatusCode().value();
 
             } else if ( o.eventType == DelayedUplink.EVENT_TYPE_LOCATION && o.locendpoint != null ) {
 
@@ -712,7 +766,7 @@ public class PayloadService {
                         break;
                 }
 
-                log.debug("Loc - Do " + m.name() + " to " + url);
+                log.debug("Loc - Do {} to {}", m.name(), url);
                 ResponseEntity<String> responseEntity =
                         restTemplate.exchange(
                                 url,
@@ -721,11 +775,11 @@ public class PayloadService {
                                 String.class
                         );
                 if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                    return true;
+                    return 200;
                 }
-                log.debug("Return code was " + responseEntity.getStatusCode());
-                return false;
-            } else if (o.eventType == DelayedUplink.EVENT_TYPE_ACK && o.ackendpoint != null) {
+                log.debug("Return code was {}", responseEntity.getStatusCode());
+                return responseEntity.getStatusCode().value();
+            } else if (o.eventType == DelayedUplink.EVENT_TYPE_JACK && o.ackendpoint != null) {
                 HttpEntity<ChirpstackPayload> he = new HttpEntity<ChirpstackPayload>(o.chirpstack, headers);
                 String url = o.ackendpoint;
                 HttpMethod m;
@@ -740,7 +794,7 @@ public class PayloadService {
                         break;
                 }
 
-                log.debug("Ack - Do " + m.name() + " to " + url);
+                log.debug("Ack - Do {} to {}", m.name(), url);
                 ResponseEntity<String> responseEntity =
                         restTemplate.exchange(
                                 url,
@@ -749,10 +803,10 @@ public class PayloadService {
                                 String.class
                         );
                 if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                    return true;
+                    return 200;
                 }
-                log.debug("Return code was " + responseEntity.getStatusCode());
-                return false;
+                log.debug("Return code was {}", responseEntity.getStatusCode());
+                return responseEntity.getStatusCode().value();
             } else if (o.eventType == DelayedUplink.EVET_TYPE_JOIN && o.joinendpoint != null) {
                 HttpEntity<ChirpstackPayload> he = new HttpEntity<ChirpstackPayload>(o.chirpstack, headers);
                 String url = o.joinendpoint;
@@ -768,7 +822,7 @@ public class PayloadService {
                         break;
                 }
 
-                log.debug("Join - Do " + m.name() + " to " + url);
+                log.debug("Join - Do {} to {}", m.name(), url);
                 ResponseEntity<String> responseEntity =
                         restTemplate.exchange(
                                 url,
@@ -777,24 +831,24 @@ public class PayloadService {
                                 String.class
                         );
                 if (responseEntity.getStatusCode().is2xxSuccessful()) {
-                    return true;
+                    return 200;
                 }
-                log.debug("Return code was " + responseEntity.getStatusCode());
-                return false;
+                log.debug("Return code was {}", responseEntity.getStatusCode());
+                return responseEntity.getStatusCode().value();
             } else {
-                log.error("Invalid event type ("+o.eventType+")");
-                return true; // no need to retry this
+                log.error("Invalid event type ({})", o.eventType);
+                return 200; // no need to retry this
             }
 
         } catch (HttpClientErrorException e) {
-            log.debug("Http client error : "+e.getMessage());
-            return false;
+            log.debug("Http client error : {}", e.getMessage());
+            return 1000;
         } catch (HttpServerErrorException e) {
-            log.debug("Http server error : "+e.getMessage());
-            return false;
+            log.debug("Http server error : {}", e.getMessage());
+            return 1001;
         } catch (Exception x ) {
-            log.debug("Http error : "+x.getMessage());
-            return false;
+            log.debug("Http error : {}", x.getMessage());
+            return 1002;
         }
     }
 

@@ -57,7 +57,7 @@ public class ForwarderConfig {
     }
 
     public String getJwtSignatureKey() {
-        if (this.getJwtSignatureKeyExternal().length() >  0 && this.getJwtSignatureKeyExternal().length() != 64) {
+        if (!this.getJwtSignatureKeyExternal().isEmpty() && this.getJwtSignatureKeyExternal().length() != 64) {
             log.error("helium.jwt.signature.key format is invalid, must be 64 char. Back to default");
         }
         if (this.getJwtSignatureKeyExternal().length() == 64) return this.getJwtSignatureKeyExternal();
@@ -220,14 +220,44 @@ public class ForwarderConfig {
         return heliumGprcPublicKey;
     }
     public String getHeliumGrpcServer() {
-        if (this.getHeliumGrpcServerExternal().length() > 0) return this.getHeliumGrpcServerExternal();
+        if (!this.getHeliumGrpcServerExternal().isEmpty()) return this.getHeliumGrpcServerExternal();
         return this.getHeliumGrpcServerDefault();
     }
 
     public int getHeliumGrpcPort() {
-        if (this.getHeliumGrpcPortExternal().length() > 0) return Integer.parseInt(this.getHeliumGrpcPortExternal());
+        if (!this.getHeliumGrpcPortExternal().isEmpty()) return Integer.parseInt(this.getHeliumGrpcPortExternal());
         return Integer.parseInt(this.getHeliumGrpcPortDefault());
     }
 
+    // =============================================
+    // MQTT
+    // =============================================
 
+    @Value ("${mqtt.server:tcp://mosquitto:1883}")
+    private String mqttServer;
+
+    @Value ("${mqtt.login:}")
+    private String mqttLogin;
+
+    @Value ("${mqtt.password:}")
+    private String mqttPassword;
+
+    @Value ("${mqtt.id:}")
+    private String mqttId;
+
+    public String getMqttServer() {
+        return mqttServer;
+    }
+
+    public String getMqttLogin() {
+        return mqttLogin;
+    }
+
+    public String getMqttPassword() {
+        return mqttPassword;
+    }
+
+    public String getMqttId() {
+        return mqttId;
+    }
 }
