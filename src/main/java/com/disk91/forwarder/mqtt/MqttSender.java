@@ -20,6 +20,7 @@
 package com.disk91.forwarder.mqtt;
 
 import com.disk91.forwarder.ForwarderConfig;
+import com.disk91.forwarder.mqtt.api.FrameForwardReport;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.ingeniousthings.tools.Now;
@@ -153,35 +154,7 @@ public class MqttSender implements MqttCallback {
 
     // Message to push to the Console for reporting an integration
     // only report failure ? can also be used to see what is in the decoded payload...
-    public enum FrameForwardReportType {
-        HTTP_SUCCESS,
-        HTTP_RETRY_SUCCESS,
-        HTTP_FAILURE,
-        HTTP_RETRY_FAILURE,
-        MQTT_SUCCESS,
-        MQTT_RETRY_SUCCESS,
-        MQTT_FAILURE,
-        MQTT_RETRY_FAILURE,
-        DOWNLINK_RECEIVED,
-    }
 
-    public static class FrameForwardReport {
-
-        public String eui;
-        public String deduplicationId;
-        public FrameForwardReportType type;
-        public String status;
-        public String message;
-
-        public FrameForwardReport(String eui, String deduplicationId, FrameForwardReportType type, String status, String message) {
-            this.eui = eui;
-            this.deduplicationId = deduplicationId;
-            this.type = type;
-            this.status = status;
-            this.message = message;
-        }
-
-    }
 
     protected static class MqttDelayedMessage {
         public String topic;
@@ -202,7 +175,7 @@ public class MqttSender implements MqttCallback {
             } catch (MqttException me) {
                 log.error("MQTT S - MessagePublish Error", me);
             } catch (JsonProcessingException e) {
-                log.error("Error in parsing payload for {}", message.deduplicationId);
+                log.error("Error in parsing payload for {}", message.deduplicationId());
             }
         } else {
             // buffer the message for later

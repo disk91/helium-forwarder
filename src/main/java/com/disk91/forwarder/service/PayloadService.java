@@ -7,6 +7,8 @@ import com.disk91.forwarder.api.interfaces.HeliumPayload;
 import com.disk91.forwarder.api.interfaces.sub.*;
 import com.disk91.forwarder.mqtt.MqttManager;
 import com.disk91.forwarder.mqtt.MqttSender;
+import com.disk91.forwarder.mqtt.api.FrameForwardReport;
+import com.disk91.forwarder.mqtt.api.FrameForwardReportType;
 import com.disk91.forwarder.service.itf.HotspotPosition;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -397,10 +399,10 @@ public class PayloadService {
                                 if (returnCode != 200) {
                                     mqttSender.publishMessage(
                                             "helium/forwarder/process/",
-                                            new MqttSender.FrameForwardReport(
+                                            new FrameForwardReport(
                                                     w.helium.getDev_eui(),
                                                     w.chirpstack.getDeduplicationId(),
-                                                    w.retry > 0 ? MqttSender.FrameForwardReportType.HTTP_RETRY_FAILURE : MqttSender.FrameForwardReportType.HTTP_FAILURE,
+                                                    w.retry > 0 ? FrameForwardReportType.HTTP_RETRY_FAILURE : FrameForwardReportType.HTTP_FAILURE,
                                                     ""+returnCode,
                                                     message
                                             ),0
@@ -419,10 +421,10 @@ public class PayloadService {
                                 } else {
                                     mqttSender.publishMessage(
                                             "helium/forwarder/process/",
-                                            new MqttSender.FrameForwardReport(
+                                            new FrameForwardReport(
                                                     w.helium.getDev_eui(),
                                                     w.chirpstack.getDeduplicationId(),
-                                                    w.retry > 0 ? MqttSender.FrameForwardReportType.HTTP_RETRY_SUCCESS : MqttSender.FrameForwardReportType.HTTP_SUCCESS,
+                                                    w.retry > 0 ? FrameForwardReportType.HTTP_RETRY_SUCCESS : FrameForwardReportType.HTTP_SUCCESS,
                                                     ""+returnCode,
                                                     message
                                             ),0
@@ -432,10 +434,10 @@ public class PayloadService {
                                 if (!processMqtt(w)) {
                                     mqttSender.publishMessage(
                                             "helium/forwarder/process/",
-                                            new MqttSender.FrameForwardReport(
+                                            new FrameForwardReport(
                                                     w.helium.getDev_eui(),
                                                     w.chirpstack.getDeduplicationId(),
-                                                    w.retry > 0 ? MqttSender.FrameForwardReportType.MQTT_RETRY_FAILURE : MqttSender.FrameForwardReportType.MQTT_FAILURE,
+                                                    w.retry > 0 ? FrameForwardReportType.MQTT_RETRY_FAILURE : FrameForwardReportType.MQTT_FAILURE,
                                                     "FAILED",
                                                     message
                                             ),0
@@ -454,10 +456,10 @@ public class PayloadService {
                                 } else {
                                     mqttSender.publishMessage(
                                             "helium/forwarder/process/",
-                                            new MqttSender.FrameForwardReport(
+                                            new FrameForwardReport(
                                                     w.helium.getDev_eui(),
                                                     w.chirpstack.getDeduplicationId(),
-                                                    w.retry > 0 ? MqttSender.FrameForwardReportType.MQTT_RETRY_SUCCESS : MqttSender.FrameForwardReportType.MQTT_SUCCESS,
+                                                    w.retry > 0 ? FrameForwardReportType.MQTT_RETRY_SUCCESS : FrameForwardReportType.MQTT_SUCCESS,
                                                     "SUCCESS",
                                                     message
                                             ),0
