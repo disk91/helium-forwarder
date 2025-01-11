@@ -59,6 +59,11 @@ public class NovaService {
         }
 
         // Load Private key
+        // Load Private key
+        // There is two key format, the first initial one was 65 bytes long, potentially composed by
+        // 01 + 32 bytes of private key + 32 bytes of public key (but I'm not sure, this format is working as a bytestream to init the java class
+        // The second one is 98 bytes long: 01 + 32 bytes of private key + 32 bytes of public key + 01 + 32 bytes of public key
+        // This file format is a bit like a buggy format... but using the first 65 bytes as the previous format is working the same way ...
         this.privateKey = new byte[64];
         try {
             InputStream inputStream = new FileInputStream(forwarderConfig.getHeliumGrpcPrivateKeyfilePath());
@@ -68,13 +73,12 @@ public class NovaService {
             while ((b = inputStream.read()) != -1) {
                 // verifiy key header should be 1 for type of key
                 if (k == 0 && b != 1) break;
-                if (k > 65) break;
                 if (k > 0 && k < 65) {
                     privateKey[k - 1] = (byte) b;
                 }
                 k++;
             }
-            if (k != 65) {
+            if (k != 65 && k != 98 ) {
                 // error
                 log.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                 log.error("Invalid private keyfile");
@@ -93,14 +97,14 @@ public class NovaService {
         try {
             byte[] owner_b = Base58.decode(forwarderConfig.getHeliumGprcPublicKey());
             if (owner_b.length == 38) {
-                byte owner_b2[] = new byte[33];
+                byte[] owner_b2 = new byte[33];
                 for (int i = 0; i < 33; i++) {
                     owner_b2[i] = owner_b[i + 1];
                 }
                 this.owner = ByteString.copyFrom(owner_b2);
             } else if (owner_b.length == 37) {
                 // no leading  0
-                byte owner_b2[] = new byte[33];
+                byte[] owner_b2 = new byte[33];
                 for (int i = 0; i < 33; i++) {
                     owner_b2[i] = owner_b[i];
                 }
@@ -167,11 +171,11 @@ public class NovaService {
                 .setSigner(this.owner)
                 .setSignature(ByteString.copyFrom(signature))
                 .build());
-            log.debug("GPRC get location duration " + (Now.NowUtcMs() - start) + "ms");
+            log.debug("GPRC get location duration {}ms", Now.NowUtcMs() - start);
 
             LatLng pos = h3.cellToLatLng(response.getLocation());
             if (pos != null && Gps.isAValidCoordinate(pos.lat, pos.lng) ) {
-                log.debug("GRPC location is (" + pos.lat + ", "+pos.lng+")");
+                log.debug("GRPC location is ({}, {})", pos.lat, pos.lng);
                 return pos;
             }
             return null;
