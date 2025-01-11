@@ -199,6 +199,14 @@ public class PayloadService {
             dc.locendpoint = req.getHeader("hlocendpoint");
             dc.ackendpoint = req.getHeader("hackendpoint");
             dc.urlparam = req.getHeader("hurlparam");
+
+            dc.format = req.getHeader("hformat");
+            if (dc.format != null ) {
+                dc.format = dc.format.trim();
+                if (dc.format.compareTo("chipstack") != 0) dc.format = "helium";
+                else dc.format = "chipstack";
+            } else dc.format = "helium";
+
             if ( dc.endpoint != null ) dc.endpoint = dc.endpoint.trim(); else return false;
             if ( dc.locendpoint != null ) dc.locendpoint = dc.locendpoint.trim();
             if (dc.ackendpoint != null ) dc.ackendpoint = dc.ackendpoint.trim();
@@ -277,6 +285,7 @@ public class PayloadService {
             if (dc.format != null ) {
                 dc.format = dc.format.trim();
                 if (dc.format.compareTo("chipstack") != 0) dc.format = "helium";
+                else dc.format = "chipstack";
             } else dc.format = "helium";
 
             String sQos = req.getHeader("hqos");
@@ -346,7 +355,7 @@ public class PayloadService {
                                 // trace
                                 try {
                                     ObjectMapper mapper = new ObjectMapper();
-                                    if (w.format.compareTo("chipstack") == 0) {
+                                    if (w.format != null && w.format.compareTo("chipstack") == 0) {
                                         message = mapper.writeValueAsString(w.chirpstack);
                                     } else {
                                         message = mapper.writeValueAsString(w.helium);
