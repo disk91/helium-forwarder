@@ -853,13 +853,13 @@ public class PayloadService {
 
         } catch (HttpClientErrorException e) {
             log.debug("Http client error : {}", e.getMessage());
-            return 1000;
+            return e.getStatusCode().value();
         } catch (HttpServerErrorException e) {
             log.debug("Http server error : {}", e.getMessage());
-            return 1001;
+            return e.getStatusCode().value();
         } catch (Exception x ) {
             log.debug("Http error : {}", x.getMessage());
-            return 1002;
+            return 1000;
         }
     }
 
